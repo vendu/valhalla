@@ -1,0 +1,49 @@
+Valhalla TODO-List
+------------------
+
+Development Tools
+-----------------
+
+- virtual machine
+  - software simulator of the hardware
+    - features undoable or unfeasible on real hardware
+      - memory guards/red-zones to catch buffer under- and overruns
+      - bounds checking of memory accesses
+- assembler
+  - retarget vas, an AT&T syntax assembler, to emit Valhalla machine/byte-code
+- c compiler
+  - retarget lcc, tinycc, or clang/llvm
+    - provide interpreter, JIT-compiler, native compiler for [a subset of] c
+- graphical debugger
+- memory profiler - memprof
+  - cache utilization
+  - virtual memory
+  - physical memory
+  - memory footprint visualization
+- code profiler; cprof
+  - microsecond and clock-cycle profiling of code blocks
+
+V0 Architecture
+---------------
+
+Machine Organization
+--------------------
+
+- graphics framebuffer
+  - 2D acceleration of basic shapes
+    - point, line, triangle, rectangle, circle, ellipse, arc, polygon
+
+Instruction Set
+---------------
+
+The initial V0 instruction set is far in design and implementation. Additions
+for later versions could include
+
+- memory management unit (MMU) for implementing virtual memory
+- instructions to aid launching of and managing threads
+  - atomic operations for synchronization
+    - bus/cacheline-lock bit in opcodes
+    - barriers: MRB (read), MWB (write), MDB (data, read-write)
+    - CAS, CAS2, LL/SC
+    - FINC, FDEC, FADD
+
