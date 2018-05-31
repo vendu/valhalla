@@ -385,10 +385,10 @@ main(int argc, char *argv[])
     for (ndx = 1 ; ndx < argc ; ndx++) {
       vasreadfile(argv[1], adr);
       vastranslate(adr);
-      vasresolve(adr);
+      vasresolve();
       vasfreesyms();
       if (!vm->regs[V0_PC_REG]) {
-	vm->regs[V0_PC_REG] = V0_TEXT_ADR;
+	vm->regs[V0_PC_REG] = adr;
       }
       ret = v0loop(vm, adr);
     }

@@ -1348,7 +1348,7 @@ vastranslate(vasmemadr base)
 }
 
 void
-vasresolve(vasmemadr base)
+vasresolve(void)
 {
     struct vassymrec *sym = symqueue;
     struct vassymrec *sym1;
@@ -1561,7 +1561,7 @@ vasreadfile(char *name, vasmemadr adr)
 #else
                     vasreadfile((char *)fname, adr);
 #endif
-                    vasresolve(adr);
+                    vasresolve();
                     vasfreesyms();
                 } else {
                     fprintf(stderr, "invalid .include directive %s\n",
@@ -1590,7 +1590,7 @@ vasreadfile(char *name, vasmemadr adr)
 #else
                     vasreadfile((char *)fname, adr);
 #endif
-                    vasresolve(adr);
+                    vasresolve();
                     vasfreesyms();
                 } else {
                     fprintf(stderr, "invalid .import directive %s\n",

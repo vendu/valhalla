@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <vas/types.h>
 
-#define VASRESOLVE     (~((vasword)0))
+#define VASRESOLVE     (~0U)
 
 #define VASTOKENVALUE  0x01
 #define VASTOKENLABEL  0x02
@@ -139,7 +139,7 @@ extern void       vasinit(void);
 extern void       vasinitalign(void);
 #endif
 extern vasmemadr  vastranslate(vasmemadr base);
-extern void       vasresolve(vasmemadr base);
+extern void       vasresolve(void);
 extern void       vasfreesyms(void);
 #if (VASBUF) && !(VASMMAP)
 extern void       vasreadfile(char *name, vasmemadr adr, int bufid);
