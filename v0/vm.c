@@ -326,6 +326,26 @@ v0loop(struct v0 *vm, v0ureg pc)
               pc = v0ret(vm, op);
 
               opjmp(vm, pc);
+          v0opird:
+              pc = v0ird(vm, op);
+
+              opjmp(vm, pc);
+          v0opiwr:
+              pc = v0iwr(vm, op);
+
+              opjmp(vm, pc);
+          v0opicf:
+              pc = v0icf(vm, op);
+
+              opjmp(vm, pc);
+          v0oprst:
+              pc = v0rst(vm, op);
+
+              opjmp(vm, pc);
+          v0ophlt:
+              pc = v0hlt(vm, op);
+
+              opjmp(vm, pc);
       }
   } while (1);
 

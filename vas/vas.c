@@ -814,8 +814,10 @@ vasgettoken(char *str, char **retptr)
 
             exit(1);
         }
+#if 0
         vasqueuetoken(token1);
         vasqueuetoken(token2);
+#endif
     } else if ((*str) && *str == '"') {
         str++;
         len = 0;
@@ -860,14 +862,14 @@ vasgettoken(char *str, char **retptr)
             token1->type = VASTOKENSTRING;
             token1->data.str = strdup(vasstrbuf);
         }
-        vasqueuetoken(token1);
+        //        vasqueuetoken(token1);
     } else if ((*str) && *str == '%') {
         str++;
         val = vasgetreg(str, &size, &str);
         token1->type = VASTOKENREG;
         token1->size = size;
         token1->data.reg = val;
-        vasqueuetoken(token1);
+        //        vasqueuetoken(token1);
     } else if ((*str) && (isalpha(*str) || *str == '_')) {
         name = vasgetlabel(str, &str);
         if (name) {
@@ -908,7 +910,7 @@ vasgettoken(char *str, char **retptr)
                 }
             }
         }
-        vasqueuetoken(token1);
+        //        vasqueuetoken(token1);
     } else if ((*str) && *str == '$') {
         str++;
         if (isalpha(*str) || *str == '_') {
@@ -936,7 +938,7 @@ vasgettoken(char *str, char **retptr)
                     }
                 }
             }
-            vasqueuetoken(token1);
+            //            vasqueuetoken(token1);
         } else if ((*str) && isdigit(*str)) {
             if (vasgetvalue(str, &val, &str)) {
                 token1->type = VASTOKENIMMED;
@@ -952,13 +954,13 @@ vasgettoken(char *str, char **retptr)
 
                 exit(1);
             }
-            vasqueuetoken(token1);
+            //            vasqueuetoken(token1);
         }
     } else if (*str == '\'') {
         val = vasgetchar(str, &str);
         token1->type = VASTOKENCHAR;
         token1->data.ch = val;
-        vasqueuetoken(token1);
+        //        vasqueuetoken(token1);
     } else if (*str == '.') {
         str++;
         size = 0;
@@ -994,7 +996,7 @@ vasgettoken(char *str, char **retptr)
             str += 5;
             token1->type = VASTOKENASCIZ;
         }
-        vasqueuetoken(token1);
+        //        vasqueuetoken(token1);
     } else if (*str == '*' || *str == '(') {
         str++;
         token1->type = VASTOKENINDIR;
@@ -1020,8 +1022,8 @@ vasgettoken(char *str, char **retptr)
 
             exit(1);
         }
-        vasqueuetoken(token1);
-        vasqueuetoken(token2);
+        //        vasqueuetoken(token1);
+        //        vasqueuetoken(token2);
     } else if (isalpha(*str) || *str == '_') {
         name = vasgetdef(str, &str);
         if (name) {
@@ -1032,13 +1034,19 @@ vasgettoken(char *str, char **retptr)
                 token1->type = VASTOKENDEF;
                 token1->data.def.name = name;
                 token1->data.def.val = val;
-                vasqueuetoken(token1);
+                //                vasqueuetoken(token1);
             }
         }
     }
     *retptr = str;
-    fprintf(stderr, "READ: ");
+    vasqueuetoken(token1);
+    fprintf(stderr, "READ #1: ");
     vasprinttoken(token1);
+    if (token2) {
+        vasqueuetoken(token2);
+        fprintf(stderr, "READ #1: ");
+        vasprinttoken(token2);
+    }
 
     return token1;
 }

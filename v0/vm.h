@@ -58,11 +58,15 @@ struct v0iofuncs {
 #define V0_R15_REG       0x0f
 #define V0_INT_REGS      16 // # of integer/scalar registers
 #define V0_SAVE_REGS     8  // caller saves r0..r7, callee r8..r15
-#define V0_PC_REG        (V0_INT_REGS + 0x00) // program counter
-#define V0_FP_REG        (V0_MAX_REGS + 0x01) // frame pointer
-#define V0_SP_REG        (V0_MAX_REGS + 0x02) // stack pointer
-#define V0_MSW_REG       (V0_MAX_REGS + 0x03) // machine status word
-#define V0_MFW_REG       (V0_MAX_REGS + 0x04) // machine feature word
+#define V0_PC_REG        (V0_INT_REGS + 0) // program counter
+#define V0_FP_REG        (V0_INT_REGS + 1) // frame pointer
+#define V0_SP_REG        (V0_INT_REGS + 2) // stack pointer
+#define V0_MSW_REG       (V0_INT_REGS + 3) // machine status word
+#define V0_MFW_REG       (V0_INT_REGS + 4) // machine feature word
+#define V0_IMR_REG       (V0_INT_REGS + 5) // interrupt-mask (1 -> block)
+#define V0_IVR_REG       (V0_INT_REGS + 6) // interrupt vector address
+#define V0_PDR_REG       (V0_INT_REGS + 7) // page directory address
+#define V0_SEG_REG       (V0_INT_REGS + 8) // segment table address
 #define V0_SYS_REGS      16
 /* system register IDs */
 #if (__BYTE_ORDER == __LITTLE_ENDIAN)
@@ -72,17 +76,18 @@ struct v0iofuncs {
 #define V0_RET_HI        0x00 // [dual-word] return value register, high word
 #define V0_RET_LO        0x01 // [dual-word] return value register, low word
 #endif
-#define V0_MAX_REGS      32     // # of bits in register maps
+#define V0_STD_REGS      32   // total number of user and system registers
+// shadow registers are used for function and system calls instead of stack
+#define V0_SR(x)         (V0_STD_REGS + (x)) // shadow-registers
 /* values for regs[V0_MSW] */
-#define V0_MSW_DEF_BITS  (V0_TF_BIT)
+#define V0_MSW_DEF_BITS  (V0_IF_BIT)
 #define V0_MSW_ZF_BIT    (1 << 0)  // zero-flag; arg1 == arg2
 #define V0_MSW_CF_BIT    (1 << 1)  // carry-flag, return bit for BTR, BTS, BTC
 #define V0_MSW_OF_BIT    (1 << 2)  // overflow
-#define V0_MSW_SF_BIT    (1 << 3)  // signed resuit; arg1 > arg2
-#define V0_MSW_IF_BIT    (1 << 4)  // interrupts enabled
-#define V0_MWS_IF_BIT    (1 << 29) // interrupts pending
-#define V0_MSW_SM_BIT    (1 << 30) // system-mode
-#define V0_MSW_BL_BIT    (1 << 31) // bus lock flag
+#define V0_MSW_IF_BIT    (1 << 3)  // interrupts enabled
+#define V0_MSW_SM_BIT    (1 << 29) // system-mode
+#define V0_MSW_ML_BIT    (1 << 30) // memory-bus lock-flag
+#define V0_MSW_SF_BIT    (1 << 31) // signed resuit; arg1 > arg2
 /* program segments */
 #define V0_TEXT_SEG      0x00 // code
 #define V0_RODATA_SEG    0x01 // read-only data (string literals etc.)
@@ -256,6 +261,8 @@ struct v0opinfo {
     char *op;
     char *func;
 };
+
+struct v0 * v0init(struct v0 *vm);
 
 #endif /* __V0_VM32_H__ */
 
