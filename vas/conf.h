@@ -4,7 +4,7 @@
 #define __VAS_CONF_H__
 
 #define VASBUF           0
-#define VASMMAP          0
+#define VASMMAP          1
 #define V0               1
 #define VAS_LINE_BUFSIZE 65536
 #define VASPREPROC       1

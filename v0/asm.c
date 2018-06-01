@@ -63,7 +63,7 @@ vasaddop(const char *str, uint8_t code, uint8_t narg)
 }
 
 static struct vasop *
-vasfindop(char *str, vasword *retsize)
+vasfindop(char *str, vasword *retsize, char **retptr)
 {
     char         *cptr = (char *)str;
     struct vasop *op = NULL;
@@ -102,6 +102,7 @@ vasfindop(char *str, vasword *retsize)
         if (!size) {
             size = 4;
             cptr[0] = '\0';
+            cptr++;
         } else {
             cptr[-1] = '\0';
         }
@@ -112,6 +113,7 @@ vasfindop(char *str, vasword *retsize)
         }
     }
     *retsize = size;
+    *retptr = cptr;
 
     return op;
 }
@@ -122,12 +124,11 @@ vasgetop(char *str, vasword *retsize, char **retptr)
     struct vasop *op = NULL;
     vasword       size = 0;
 
-    op = vasfindop(str, &size);
+    op = vasfindop(str, &size, &str);
 #if (VASDEBUG)
     fprintf(stderr, "getop: %s\n", str);
 #endif
     if (op) {
-        str += op->len;
         *retptr = str;
         *retsize = size;
     }

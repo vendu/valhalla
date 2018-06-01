@@ -38,10 +38,10 @@ static long              vasgetvalue(char *str, vasword *retval,
 static char *            vasgetdef(char *srt, char **retptr);
 static int               vasgetchar(char *str, char **retptr);
 #if (VASMMAP)
-static struct vastoken * vasgettoken(char *str, char **retptr,
+static void              vasgettoken(char *str, char **retptr,
                                      struct vasmap *map);
 #else
-static struct vastoken * vasgettoken(char *str, char **retptr);
+static void              vasgettoken(char *str, char **retptr);
 #endif
 
 static struct vastoken * vasprocvalue(struct vastoken *, vasmemadr, vasmemadr *);
@@ -173,7 +173,6 @@ vasqueuetoken(struct vastoken *token)
 {
     if (!token->type) {
         vasprinttoken(token);
-        abort();
     }
     token->next = NULL;
     fprintf(stderr, "QUEUE: ");
@@ -182,13 +181,9 @@ vasqueuetoken(struct vastoken *token)
         token->prev = NULL;
         vastokenqueue = token;
         vastokentail = token;
-    } else if (vastokentail) {
+    } else {
         token->prev = vastokentail;
         vastokentail->next = token;
-        vastokentail = token;
-    } else {
-        vastokenqueue->next = token;
-        token->prev = vastokenqueue;
         vastokentail = token;
     }
 
@@ -769,10 +764,10 @@ vasgetchar(char *str, char **retptr)
 }
 
 #if (VASMMAP)
-static struct vastoken *
+static void
 vasgettoken(char *str, char **retptr, struct vasmap *map)
 #else
-static struct vastoken *
+static void
 vasgettoken(char *str, char **retptr)
 #endif
 {
@@ -780,7 +775,7 @@ vasgettoken(char *str, char **retptr)
     long             len;
     char            *buf = vasstrbuf;
     struct vastoken *token1 = malloc(sizeof(struct vastoken));
-    //    struct vastoken *token2 = NULL;
+    struct vastoken *token2;
     struct vasop    *op = NULL;
     char            *name = str;
     vasword          val = VASRESOLVE;
@@ -813,14 +808,17 @@ vasgettoken(char *str, char **retptr)
             token1->data.ndx.val = ndx;
         }
         if (vasgetvalue(str, &val, &str)) {
-            token1->type = VASTOKENVALUE;
-            token1->data.value.val = val;
-            token1->data.value.size = size;
+            token2 = malloc(sizeof(struct vastoken));
+            token2->type = VASTOKENVALUE;
+            token2->data.value.val = val;
+            token2->data.value.size = size;
         } else {
             fprintf(stderr, "invalid token %s\n", vaslinebuf);
 
             exit(1);
         }
+        vasqueuetoken(token1);
+        vasqueuetoken(token2);
     } else if ((*str) && *str == '"') {
         str++;
         len = 0;
@@ -865,12 +863,14 @@ vasgettoken(char *str, char **retptr)
             token1->type = VASTOKENSTRING;
             token1->data.str = strdup(vasstrbuf);
         }
+        vasqueuetoken(token1);
     } else if ((*str) && *str == '%') {
         str++;
         val = vasgetreg(str, &size, &str);
         token1->type = VASTOKENREG;
         token1->size = size;
         token1->data.reg = val;
+        vasqueuetoken(token1);
     } else if ((*str) && (isalpha(*str) || *str == '_')) {
         name = vasgetlabel(str, &str);
         if (name) {
@@ -910,6 +910,7 @@ vasgettoken(char *str, char **retptr)
                     }
                 }
             }
+            vasqueuetoken(token1);
         }
     } else if ((*str) && *str == '$') {
         str++;
@@ -938,6 +939,7 @@ vasgettoken(char *str, char **retptr)
                     }
                 }
             }
+            vasqueuetoken(token1);
         } else if ((*str) && isdigit(*str)) {
             if (vasgetvalue(str, &val, &str)) {
                 token1->type = VASTOKENIMMED;
@@ -953,6 +955,7 @@ vasgettoken(char *str, char **retptr)
 
                 exit(1);
             }
+            vasqueuetoken(token1);
         }
     } else if (*str == '\'') {
         val = vasgetchar(str, &str);
@@ -993,14 +996,16 @@ vasgettoken(char *str, char **retptr)
             str += 5;
             token1->type = VASTOKENASCIZ;
         }
+        vasqueuetoken(token1);
     } else if (*str == '*' || *str == '(') {
         str++;
         token1->type = VASTOKENINDIR;
+        token2 = malloc(sizeof(struct vastoken));
         if (*str == '%') {
             str++;
             val = vasgetreg(str, &size, &str);
-            token1->type = VASTOKENREG;
-            token1->size = size;
+            token2->type = VASTOKENREG;
+            token2->size = size;
             token1->data.reg = VASREGINDIR | val;
         } else if (isalpha(*str) || *str == '_') {
             name = vasgetsym(str, &str);
@@ -1017,6 +1022,8 @@ vasgettoken(char *str, char **retptr)
 
             exit(1);
         }
+        vasqueuetoken(token1);
+        vasqueuetoken(token2);
     } else if (isalpha(*str) || *str == '_') {
         name = vasgetdef(str, &str);
         if (name) {
@@ -1028,11 +1035,14 @@ vasgettoken(char *str, char **retptr)
                 token1->data.def.name = name;
                 token1->data.def.val = val;
             }
+            vasqueuetoken(token1);
         }
+    } else {
+        free(token1);
     }
     *retptr = str;
 
-    return token1;
+    return;
 }
 
 static struct vastoken *
@@ -1373,7 +1383,7 @@ vasresolve(void)
     return;
 }
 
-#if (VASBUF)
+#if (VASBUF) && !(VASMMAP)
 void
 vasreadfile(char *name, vasmemadr adr, int bufid)
 #else
@@ -1385,17 +1395,15 @@ vasreadfile(char *name, vasmemadr adr)
     struct vasmap    map;
     struct stat      statbuf;
     int              sysret;
-    int              fd;
     char            *base;
 #endif
     long             buflen = VAS_LINE_BUFSIZE;
-#if (VASBUF) && !(VASMMAP)
+#if (VASBUF) || (VASMMAP)
     int              fd = -1;
 #elif !(VASMMAP)
     FILE            *fp = fopen((char *)name, "r");
 #endif
     long             eof = 0;
-    struct vastoken *token = NULL;
     struct vasval   *def;
     char            *fname;
     char            *ptr;
@@ -1404,7 +1412,7 @@ vasreadfile(char *name, vasmemadr adr)
     long             loop = 1;
     int              ch;
     long             comm = 0;
-    long             done = 1;
+    long             empty = 1;
     long             len = 0;
 #if (VASDB)
     unsigned long    line = 0;
@@ -1448,15 +1456,15 @@ vasreadfile(char *name, vasmemadr adr)
             break;
         }
 #endif
-        if (done) {
+        if (empty) {
             if (eof) {
                 loop = 0;
-//                done = 0;
+//                empty = 0;
 
                 break;
             }
             str = vaslinebuf;
-            done = 0;
+            empty = 0;
 #if (VASMMAP)
             ch = vasgetc(&map);
 #elif (VASBUF)
@@ -1498,7 +1506,7 @@ vasreadfile(char *name, vasmemadr adr)
                     str++;
                 }
                 if (str > lim) {
-                    done = 1;
+                    empty = 1;
                 }
             }
         } else if (!strncmp((char *)str, ".define", 7)) {
@@ -1540,8 +1548,8 @@ vasreadfile(char *name, vasmemadr adr)
                 }
                 if (*str == '>') {
                     *str = '\0';
-#if (VASBUF)
-                    vasreadfile((char *)fname, adr, ++bufid);
+#if (VASBUF) && !(VASMMAP)
+                    vasreadfile((char *)fname, adr, ++vasbufid);
                     bufid--;
 #else
                     vasreadfile((char *)fname, adr);
@@ -1555,7 +1563,7 @@ vasreadfile(char *name, vasmemadr adr)
                     exit(1);
                 }
             }
-            done = 1;
+            //            done = 1;
         } else if (!strncmp((char *)str, ".import", 7)) {
             str += 7;
             while ((*str) && isspace(*str)) {
@@ -1569,7 +1577,7 @@ vasreadfile(char *name, vasmemadr adr)
                 }
                 if (*str == '>') {
                     *str = '\0';
-#if (VASBUF)
+#if (VASBUF) && !(VASMMAP)
                     vasreadfile((char *)fname, adr, ++bufid);
                     bufid--;
 #else
@@ -1584,11 +1592,11 @@ vasreadfile(char *name, vasmemadr adr)
                     exit(1);
                 }
             }
-            done = 1;
+            //            empty = 1;
         } else if (str[0] == ';'
                    || (str[0] == '/' && str[1] == '/')) {
             /* the rest of the line is comment */
-            done = 1;
+            empty = 1;
         } else if (str[0] == '/' && str[1] == '*') {
             /* comment */
             comm = 1;
@@ -1626,28 +1634,28 @@ vasreadfile(char *name, vasmemadr adr)
                     }
                 }
             }
-            done = 1;
+            empty = 1;
         } else if (*str) {
 #if (VASMMAP)
-            token = vasgettoken(str, &str, &map);
+            vasgettoken(str, &str, &map);
 #else
-            token = vasgettoken(str, &str);
+            vasgettoken(str, &str);
 #endif
-            if (token) {
 #if (VASDB)
+            if (token) {
                 token->file = strdup((char *)name);
                 token->line = line;
-#endif
                 vasqueuetoken(token);
             }
+#endif
             while (isspace(*str)) {
                 str++;
             }
             if (str >= lim) {
-                done = 1;
+                empty = 1;
             }
         } else {
-            done = 1;
+            empty = 1;
         }
     }
 #if (VASBUF) || (VASMMAP)
