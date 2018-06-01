@@ -6,11 +6,5 @@ typedef v0adr  vasmemadr;
 typedef v0reg  vasword;
 typedef v0ureg vasuword;
 
-struct readbuf {
-    void *data;
-    char *cur;
-    char *lim;
-};
-
 #endif /* __VAS_TYPES_H__ */
 

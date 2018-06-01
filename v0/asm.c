@@ -75,7 +75,7 @@ vasfindop(char *str, vasword *retsize)
     }
     if (key) {
         switch (cptr[-1]) {
-            case 'b':
+           case 'b':
                 size = 1;
                 key -= 'b';
 
@@ -334,7 +334,7 @@ vasprocop(struct vastoken *token, v0memadr adr,
             vasfreetoken(token1);
             retval = token2;
         }
-        if (narg == 2 && (token2)) {
+        if (token2) {
             if (token2->type == VASTOKENREG) {
                 op->reg2 = token2->data.reg;
             } else if (havearg) {
@@ -416,9 +416,9 @@ vasprocop(struct vastoken *token, v0memadr adr,
 
                         break;
                 }
-                retval = token2->next;
-                vasfreetoken(token2);
             }
+            retval = token2->next;
+            vasfreetoken(token2);
         }
     }
     op->parm = len;
