@@ -164,6 +164,7 @@ vasgetreg(char *str, vasword *retsize, char **retptr)
 #endif
     }
     if (size) {
+        reg = 0;
         while ((*str) && isdigit(*str)) {
             reg *= 10;
             reg += *str - '0';

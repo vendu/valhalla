@@ -1,4 +1,4 @@
-//msg:	.byte 'h', 'e', 'l', 'l', 'o', '\n', '\0'
+msg:	.byte 'h', 'e', 'l', 'l', 'o', '\n', '\0'
 
 .include <stdio.def>
 

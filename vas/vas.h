@@ -129,7 +129,7 @@ struct vasline {
     uint8_t        *data;
 };
 
-struct vasline  * vasfindline(vasmemadr adr);
+struct vasline  * vasfindline(vasuword adr);
 #endif
 
 void              v0disasm(struct v0 *vm, struct v0op *op, v0reg pc);
@@ -138,13 +138,13 @@ extern void       vasinit(void);
 #if (VASALIGN)
 extern void       vasinitalign(void);
 #endif
-extern vasmemadr  vastranslate(vasmemadr base);
+extern vasuword   vastranslate(vasuword base);
 extern void       vasresolve(void);
 extern void       vasfreesyms(void);
 #if (VASBUF) && !(VASMMAP)
-extern void       vasreadfile(char *name, vasmemadr adr, int bufid);
+extern void       vasreadfile(char *name, vasuword adr, int bufid);
 #else
-extern void       vasreadfile(char *name, vasmemadr adr);
+extern void       vasreadfile(char *name, vasuword adr);
 #endif
 
 extern void       vasfreetoken(struct vastoken *token);
@@ -152,8 +152,8 @@ extern void       vasqueuesym(struct vassymrec *sym);
 
 extern void       vasprinttoken(struct vastoken *token);
 
-typedef struct vastoken * vastokfunc_t(struct vastoken *, vasmemadr,
-                                       vasmemadr *);
+typedef struct vastoken * vastokfunc_t(struct vastoken *, vasuword,
+                                       vasuword *);
 
 #endif /* __VAS_VAS_H__ */
 

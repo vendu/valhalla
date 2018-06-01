@@ -374,7 +374,7 @@ int
 main(int argc, char *argv[])
 {
     struct v0 *vm = v0init(NULL);
-    vasmemadr  adr = V0_TEXT_ADR;
+    vasuword   adr = V0_TEXT_ADR;
     int        ret = EXIT_FAILURE;
     long       ndx;
 
