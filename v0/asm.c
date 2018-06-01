@@ -22,12 +22,11 @@ static long       vasinitflg;
 //#define vasophasval(code) (bitset(v0valbits, code))
 
 #define vassetnop(adr)    (*((uint32_t *)(op)) = V0_NOP)
-#define vassetop(op, str, id, n, slen)                                  \
+#define vassetop(op, id, n, scl)                                        \
     do {                                                                \
-        (op)->name = strndup(str, len);                                 \
         (op)->code = (id);                                              \
         (op)->narg = (n);                                               \
-        (op)->len = (slen);                                             \
+        (op)->sft = (scl);                                              \
     } while (0)
 
 /*
@@ -39,27 +38,69 @@ long
 vasaddop(const char *str, uint8_t code, uint8_t narg)
 {
     char         *cptr = (char *)str;
-    long          key = 0;
-    struct vasop *op;
+    long          key1 = 0;
+    long          key2;
+    struct vasop *op1;
+    struct vasop *op2;
     uint8_t       len;
 
-    op = calloc(1, sizeof(struct vasop));
-    if (!op) {
+    op1 = calloc(1, sizeof(struct vasop));
+    if (!op1) {
 
         return 0;
     }
-    while (*cptr) {
-        key = *cptr++;
+    len = 0;
+    while ((*cptr) && len < V0_MNEMO_LEN - 1) {
+        op1->name[len] = *cptr;
+        key1 += *cptr++;
+        len++;
     }
-    if (key) {
-        key &= V0_HASH_SIZE - 1;
-        len = cptr - str;
-        vassetop(op, str, code, narg, len);
-        op->next = v0optab[key];
-        v0optab[key] = op;
+    key2 = key1;
+    if (key1) {
+        key1 = tmhash32(key1);
+        key1 &= V0_HASH_SIZE - 1;
+        vassetop(op1, code, narg, V0_DEF_SHIFT);
+        op1->next = v0optab[key1];
+        v0optab[key1] = op1;
+        op2 = calloc(1, sizeof(struct vasop));
+        memcpy(op2, op1, sizeof(struct vasop));
+        key1 = key2 + 'b';
+        op2->name[len] = 'b';
+        key1 = tmhash32(key1);
+        key1 &= V0_HASH_SIZE - 1;
+        vassetop(op2, code, narg, 0);
+        op2->next = v0optab[key1];
+        v0optab[key1] = op2;
+        op2 = calloc(1, sizeof(struct vasop));
+        memcpy(op2, op1, sizeof(struct vasop));
+        key1 = key2 + 'w';
+        op2->name[len] = 'w';
+        key1 = tmhash32(key1);
+        key1 &= V0_HASH_SIZE - 1;
+        vassetop(op2, code, narg, 1);
+        op2->next = v0optab[key1];
+        v0optab[key1] = op2;
+        op2 = calloc(1, sizeof(struct vasop));
+        memcpy(op2, op1, sizeof(struct vasop));
+        key1 = key2 + 'l';
+        op2->name[len] = 'l';
+        key1 = tmhash32(key1);
+        key1 &= V0_HASH_SIZE - 1;
+        vassetop(op2, code, narg, 2);
+        op2->next = v0optab[key1];
+        v0optab[key1] = op2;
+        op2 = calloc(1, sizeof(struct vasop));
+        memcpy(op2, op1, sizeof(struct vasop));
+        key1 = key2 + 'q';
+        op2->name[len] = 'q';
+        key1 = tmhash32(key1);
+        key1 &= V0_HASH_SIZE - 1;
+        vassetop(op2, code, narg, 4);
+        op2->next = v0optab[key1];
+        v0optab[key1] = op2;
     }
 
-    return key;
+    return key1;
 }
 
 static struct vasop *
@@ -68,51 +109,27 @@ vasfindop(char *str, vasword *retsize, char **retptr)
     char         *cptr = (char *)str;
     struct vasop *op = NULL;
     long          key = 0;
-    vasword       size = 0;
+    vasword       sft = 0;
+    size_t        len = 0;
 
-    while (*cptr && !isspace(*cptr)) {
-        key = *cptr++;
+    while ((*cptr) && !isspace(*cptr) && len < V0_MNEMO_LEN - 1) {
+        key += *cptr++;
+        len++;
     }
     if (key) {
-        switch (cptr[-1]) {
-           case 'b':
-                size = 1;
-                key -= 'b';
-
-                break;
-            case 'w':
-                size = 2;
-                key -= 'w';
-
-                break;
-            case 'l':
-                size = 4;
-                key -= 'l';
-
-                break;
-            case 'q':
-                size = 8;
-                key -= 'q';
-
-                break;
-            default:
-
-                break;
-        }
-        if (!size) {
-            size = 4;
-            cptr[0] = '\0';
-            cptr++;
-        } else {
-            cptr[-1] = '\0';
-        }
+        key = tmhash32(key);
         key &= V0_HASH_SIZE - 1;
+        cptr[0] = '\0';
         op = v0optab[key];
+        cptr++;
         while ((op) && strcmp(op->name, str)) {
             op = op->next;
         }
+        if (op) {
+            sft = op->sft;
+        }
     }
-    *retsize = size;
+    *retsize = sft;
     *retptr = cptr;
 
     return op;
@@ -124,13 +141,13 @@ vasgetop(char *str, vasword *retsize, char **retptr)
     struct vasop *op = NULL;
     vasword       size = 0;
 
-    op = vasfindop(str, &size, &str);
 #if (VASDEBUG)
     fprintf(stderr, "getop: %s\n", str);
 #endif
+    op = vasfindop(str, &size, &str);
     if (op) {
-        *retptr = str;
         *retsize = size;
+        *retptr = str;
     }
 
     return op;
@@ -163,18 +180,23 @@ vasgetreg(char *str, vasword *retsize, char **retptr)
         size = 8;
 #endif
     }
-    if (size) {
+    if ((size) && (*str) && isdigit(*str)) {
         reg = 0;
         while ((*str) && isdigit(*str)) {
             reg *= 10;
             reg += *str - '0';
             str++;
         }
-        while (*str == ')' || *str == ',') {
+        if ((*str) && (*str == ',' || isspace(*str))) {
+            str[0] = '\0';
             str++;
+            *retsize = size;
+            *retptr = str;
+        } else {
+            fprintf(stderr, "invalid register name %s\n", str);
+
+            exit(1);
         }
-        *retsize = size;
-        *retptr = str;
     } else {
         fprintf(stderr, "invalid register name %s\n", str);
 
@@ -206,8 +228,8 @@ v0disasm(struct v0 *vm, struct v0op *op, v0reg pc)
 }
 
 struct vastoken *
-vasprocop(struct vastoken *token, v0memadr adr,
-          v0memadr *retadr)
+vasprocinst(struct vastoken *token, v0memadr adr,
+            v0memadr *retadr)
 {
     struct v0op      *op = (struct v0op *)&v0vm->mem[adr];
     //    v0memadr          opadr = rounduppow2(adr, 4);
@@ -265,15 +287,15 @@ vasprocop(struct vastoken *token, v0memadr adr,
                         havearg = 1;
                         adr += sizeof(struct v0op) + sizeof(union v0oparg);
                         switch (token->data.value.size) {
-                            case 1:
+                            case 0:
                                 op->arg[0].i8 = val;
 
                                 break;
-                            case 2:
+                            case 1:
                                 op->arg[0].i16 = val;
 
                                 break;
-                            case 4:
+                            case 2:
                                 op->arg[0].i32 = val;
 
                                 break;

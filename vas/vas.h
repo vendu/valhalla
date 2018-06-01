@@ -11,35 +11,37 @@
 
 #define VASRESOLVE     (~0U)
 
-#define VASTOKENVALUE  0x01
-#define VASTOKENLABEL  0x02
-#define VASTOKENINST   0x03
-#define VASTOKENREG    0x04
-#define VASTOKENDEF    0x07
-#define VASTOKENSYM    0x08
-#define VASTOKENCHAR   0x09
-#define VASTOKENIMMED  0x0a
-#define VASTOKENINDIR  0x0b
-#define VASTOKENADR    0x0c
-#define VASTOKENINDEX  0x0d
-#define VASTOKENDATA   0x0e
-#define VASTOKENGLOBL  0x0f
-#define VASTOKENSPACE  0x10
-#define VASTOKENORG    0x11
-#define VASTOKENALIGN  0x12
-#define VASTOKENASCIZ  0x13
-#define VASTOKENSTRING 0x14
-#define VASTOKENPAREN  0x15
+#define VASTOKENVALUE  1
+#define VASTOKENLABEL  2
+#define VASTOKENINST   3
+#define VASTOKENREG    4
+#define VASTOKENDEF    5
+#define VASTOKENSYM    6
+#define VASTOKENCHAR   7
+#define VASTOKENIMMED  8
+#define VASTOKENINDIR  9
+#define VASTOKENADR    10
+#define VASTOKENINDEX  11
+#define VASTOKENDATA   12
+#define VASTOKENGLOBL  13
+#define VASTOKENSPACE  14
+#define VASTOKENORG    15
+#define VASTOKENALIGN  16
+#define VASTOKENASCIZ  17
+#define VASTOKENSTRING 18
+#define VASTOKENPAREN  19
 #if (VASPREPROC)
-#define VASTOKENOP     0x16
+#define VASTOKENOP     20
 #endif
-#define VASNTOKEN      0x20
+#define VASNTOKEN      32
 
+#define V0_MNEMO_LEN   8
+#define V0_DEF_SHIFT   2
 struct vasop {
-    const char   *name;
+    char          name[V0_MNEMO_LEN];
     uint8_t       code;
     uint8_t       narg;
-    uint8_t       len;
+    uint8_t       sft;
     struct vasop *next;
 };
 
@@ -47,7 +49,7 @@ struct vasinst {
     const char *name;
     uint8_t     code;
     uint8_t     narg;
-    uint8_t     len;
+    uint8_t     sft;
 };
 
 struct vaslabel {

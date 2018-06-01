@@ -97,8 +97,8 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 #endif /* defined(__GNUC__) */
 #define v0addop(op, str, narg)                                          \
     (vasaddop(#str, op, narg))
-#define v0setop(op, str, narg, tab)                                    \
-    (v0opnametab[(op)] = #str,                                         \
+#define v0setop(op, str, narg, tab)                                     \
+    (v0opnametab[(op)] = #str,                                          \
      ((_V0OPTAB_T *)(tab))[(op)] = _v0opadr(str))
 
 #define v0setopbits(op, bits1, bits2, tab)                              \

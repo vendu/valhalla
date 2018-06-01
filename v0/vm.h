@@ -180,14 +180,14 @@ union v0oparg {
 #define V0_TRAP_BIT      0x01 // breakpoint
 #define V0_AUX_BIT       0x04 // reserved for per-instruction flags
 /* val-field */
-#define V0_IMM_VAL_MAX   0x3ff
-#define V0_IMM_VAL_MIN   (-0x1ff - 1)
+#define V0_IMM_VAL_MAX   0xff
+#define V0_IMM_VAL_MIN   (-0x7f - 1)
 
 /* NOP is declared as all 1-bits */
 #define V0_NOP_CODE      (~UINT32_C(0))
 #define v0opisnop(op)    (*(uint32_t *)(op) == V0_NOP_CODE)
-#define V0_SIGNED_BIT    (1 << 9)
-#define v0opissigned(op) ((op)->val & V0_SIGNED_BIT)
+#define V0_SIGNED_BIT    (1 << 2)
+#define v0opissigned(op) ((op)->parm & V0_SIGNED_BIT)
 
 /* I/O-operations always have a single register argument */
 struct v0op {
@@ -195,8 +195,9 @@ struct v0op {
     unsigned int   reg1 : 4; // register argument #1 ID
     unsigned int   reg2 : 4; // register argument #2 ID
     unsigned int   adr  : 2; // addressing mode
-    unsigned int   parm : 4; // parameter such as address scale shift count
-    unsigned int   val  : 10; // immediate value such as shift count or offset
+    unsigned int   parm : 3; // address scale shift count
+    unsigned int   flg  : 3; // instruction flags
+    unsigned int   val  : 8; // immediate value; shift count, register range
     union v0oparg  arg[EMPTY]; // possible argument value
 };
 
