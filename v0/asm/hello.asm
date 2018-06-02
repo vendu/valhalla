@@ -8,13 +8,14 @@ _start:
 	ldr		$msg,   %r0     ; r0 = message-string address
 	ldrb	*%r0, %r1   	; r1 = first character
 	ldr		$STDOUT, %r2    ; r2 = file descriptor for stdout
-	cmp		$0x00,  %r1     ; check if first character is 0
+	ldr		$NUL, %r3		; r3 = NUL-terminator
+	cmp		%r3,  %r1       ; check if first character is NUL
 	biz	    done        	; yes
 loop:
 	inc	    %r0         	; increment address
-	iwrb	%r2, %r1    	; write character to stdout
+	iwrb	%r1, %r2    	; write character to stdout
 	ldrb	*%r0, %r1		; read new character
-	cmp		$NUL, %r1       ; check if character non-zero
+	cmp		%r3, %r1        ; check if character is NUL
 	bnz		loop            ; no
 done:
 	hlt

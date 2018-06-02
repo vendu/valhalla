@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
-//#include <zero/prof.h>
 #include <v0/vm.h>
 #include <v0/io.h>
 #include <v0/dev.h>
@@ -107,14 +106,18 @@ v0writevtd(struct v0 *vm, uint8_t port, v0reg val)
     FILE *fp = vm->vtdfp;
     int   ret;
 
-    ret = fputc(val & 0xff, fp);
-    if (ret != EOF) {
+    if (fp) {
+        ret = fputc(val & 0xff, fp);
+        if (ret != EOF) {
 
-        return;
+            return;
+        }
+        fprintf(stderr, "V0: failed to print to VTD-file %s\n", vm->vtdpath);
+        fprintf(stderr, "closing VTD-file %s\n", vm->vtdpath);
+        fclose(fp);
+        vm->vtdfp = NULL;
     }
-    fprintf(stderr, "V0: failed to print to VTD-file %s\n",
-            vm->vtdpath);
 
-    exit(1);
+    return;
 }
 

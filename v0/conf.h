@@ -3,11 +3,12 @@
 
 //#define V0_DEBUG_TABS
 #define V0_PRINT_XCPT
+#define V0_DEBUG_TABS
 
 //#include <valhalla/param.h>
 
-#define V0_CACHELINE_SIZE   32
-#define V0_CACHESTRIDE_SIZE 128
+#define V0_CACHELINE_SIZE   32 // cacheline size
+#define V0_CACHESTRIDE_SIZE 128 // cache fetch size
 #define V0_WORD_SIZE        4
 #define V0_MAX_INSTS        256
 #define V0_HASH_SIZE        V0_MAX_INSTS
