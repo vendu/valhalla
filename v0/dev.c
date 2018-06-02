@@ -10,7 +10,7 @@
 static struct v0tmr v0tmr;
 
 void
-v0readkbd(struct v0 *vm, uint8_t port, v0ureg reg)
+v0readkbd(struct v0 *vm, uint8_t port, v0reg reg)
 {
     v0reg *dest = v0regtoptr(vm, reg);
     v0reg  key = getchar();
@@ -24,7 +24,7 @@ v0readkbd(struct v0 *vm, uint8_t port, v0ureg reg)
 }
 
 void
-v0writetty(struct v0 *vm, uint8_t port, v0ureg val)
+v0writetty(struct v0 *vm, uint8_t port, v0reg val)
 {
     printf("%uc", val & 0xff);
 
@@ -32,7 +32,7 @@ v0writetty(struct v0 *vm, uint8_t port, v0ureg val)
 }
 
 void
-v0writeerr(struct v0 *vm, uint8_t port, v0ureg val)
+v0writeerr(struct v0 *vm, uint8_t port, v0reg val)
 {
     fprintf(stderr, "%uc", val & 0xff);
 
@@ -40,7 +40,7 @@ v0writeerr(struct v0 *vm, uint8_t port, v0ureg val)
 }
 
 void
-v0readrtc(struct v0 *vm, uint8_t port, v0ureg reg)
+v0readrtc(struct v0 *vm, uint8_t port, v0reg reg)
 {
     v0reg  *dest = v0regtoptr(vm, reg);
     time_t  tm = time(NULL);
@@ -52,7 +52,7 @@ v0readrtc(struct v0 *vm, uint8_t port, v0ureg reg)
 }
 
 void
-v0readtmr(struct v0 *vm, uint8_t port, v0ureg reg)
+v0readtmr(struct v0 *vm, uint8_t port, v0reg reg)
 {
     v0wreg  w = vm->regs[reg];
     v0reg  *dest = v0regtoptr(vm, reg);
@@ -82,7 +82,7 @@ v0readtmr(struct v0 *vm, uint8_t port, v0ureg reg)
 }
 
 void
-v0conftmr(struct v0 *vm, uint8_t port, v0ureg val)
+v0conftmr(struct v0 *vm, uint8_t port, v0reg val)
 {
     if (val & V0_HIRES_TMR) {
         /*
@@ -102,7 +102,7 @@ v0conftmr(struct v0 *vm, uint8_t port, v0ureg val)
 }
 
 void
-v0writevtd(struct v0 *vm, uint8_t port, v0ureg val)
+v0writevtd(struct v0 *vm, uint8_t port, v0reg val)
 {
     FILE *fp = vm->vtdfp;
     int   ret;

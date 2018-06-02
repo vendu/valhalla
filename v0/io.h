@@ -11,13 +11,13 @@
 #define V0_TMR_INTERVAL 0x40000000
 #define v0mkitmr(hz)
 
-void v0readkbd(struct v0 *vm, uint8_t port, v0ureg reg);
-void v0writetty(struct v0 *vm, uint8_t port, v0ureg val);
-void v0writeerr(struct v0 *vm, uint8_t port, v0ureg val);
-void v0readrtc(struct v0 *vm, uint8_t port, v0ureg reg);
-void v0readtmr(struct v0 *vm, uint8_t port, v0ureg reg);
-void v0conftmr(struct v0 *vm, uint8_t port, v0ureg val);
-void v0writevtd(struct v0 *vm, uint8_t port, v0ureg val);
+void v0readkbd(struct v0 *vm, uint8_t port, v0reg reg);
+void v0writetty(struct v0 *vm, uint8_t port, v0reg val);
+void v0writeerr(struct v0 *vm, uint8_t port, v0reg val);
+void v0readrtc(struct v0 *vm, uint8_t port, v0reg reg);
+void v0readtmr(struct v0 *vm, uint8_t port, v0reg reg);
+void v0conftmr(struct v0 *vm, uint8_t port, v0reg val);
+void v0writevtd(struct v0 *vm, uint8_t port, v0reg val);
 
 #endif /* __V0_IO_H__ */
 

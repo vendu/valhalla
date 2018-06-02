@@ -200,7 +200,6 @@ vasqueuetoken(struct vastoken *token)
     }
     token->prev = NULL;
     token->next = NULL;
-    fprintf(stderr, "QUEUE: ");
     if (!vastokenqueue) {
         vastokenqueue = token;
         vastokentail = token;
@@ -210,7 +209,6 @@ vasqueuetoken(struct vastoken *token)
         vastokentail = token;
         vasprinttoken(token->prev);
     }
-    vasprinttoken(token);
 
     return;
 }

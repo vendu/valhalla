@@ -77,7 +77,7 @@ v0initio(struct v0 *vm)
     }
     vec[V0_STDIN_PORT].rdfunc = v0readkbd;
     vec[V0_STDOUT_PORT].wrfunc = v0writetty;
-    vec[V0_STDERR_PORT].wrfunc = v0writetty;
+    vec[V0_STDERR_PORT].wrfunc = v0writeerr;
     vec[V0_RTC_PORT].rdfunc = v0readrtc;
     vec[V0_TMR_PORT].rdfunc = v0readtmr;
 
