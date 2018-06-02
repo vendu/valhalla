@@ -3,14 +3,14 @@
 #ifndef __VAS_OPT_H__
 #define __VAS_OPT_H__
 
-//#include <zero/trix.h>
+#include <valhalla/cdefs.h>
 
 extern void vasinitalign(void);
 
-#define vasalign(adr, x)                                                \
+#define vasalign2(adr, x)                                               \
     (!((x) & (sizeof(x) - 1))                                           \
      ? (adr)                                                            \
-     : rounduppow2(adr,sizeof(x)))
+     : roundup2(adr,sizeof(x)))
 #define vasalignword(adr)                                               \
     vasalign(adr, sizeof(vasword_t))
 #define vasaligntok(adr, type)                                          \

@@ -28,7 +28,18 @@ v0writetty(struct v0 *vm, uint16_t port, uint8_t reg)
     v0reg *src = v0regtoptr(vm, reg);
     int    ch = *src;
 
-    printf("%c", ch);
+    printf("%uc", ch);
+
+    return;
+}
+
+void
+v0writeerr(struct v0 *vm, uint16_t port, uint8_t reg)
+{
+    v0reg *src = v0regtoptr(vm, reg);
+    int    ch = *src;
+
+    fprintf(stderr, "%uc", ch);
 
     return;
 }

@@ -3,7 +3,7 @@
 #ifndef __VAS_CONF_H__
 #define __VAS_CONF_H__
 
-#define VASBUF           0
+#define VASBUF           1
 #define VASMMAP          1
 #define V0               1
 #define VAS_LINE_BUFSIZE 65536
@@ -11,6 +11,7 @@
 #define VASDB            0
 #define VASALIGN         0
 #define PAGESIZE         4096
+#define VAS_READ_BUFS    32
 
 #if defined(V0)
 #include <v0/mach.h>

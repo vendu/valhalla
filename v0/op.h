@@ -75,12 +75,23 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
     do {								\
         struct v0op *_op = v0adrtoptr(vm, pc);				\
 									\
+	if (v0opisvalid(_op, pc)) {					\
+	    goto *jmptab[(_op)->code];					\
+	} else {							\
+	    v0doxcpt(V0_TEXT_FAULT);					\
+	  								\
+	    return V0_TEXT_FAULT;					\
+	}								\
+    } while (0)
+#if 0
+#define opjmp(vm, pc)                                                   \
+    do {								\
+        struct v0op *_op = v0adrtoptr(vm, pc);				\
+									\
 	while (v0opisnop(_op)) {					\
-	    v0traceop(vm, _op, pc);					\
 	    (pc) += sizeof(struct v0op);				\
 	}								\
 	if (v0opisvalid(_op, pc)) {					\
-	    v0traceop(vm, _op, pc);					\
 	    if (_op->adr == V0_DIR_ADR || _op->adr == V0_NDX_ADR) {	\
 	      (pc) += sizeof(struct v0op) + sizeof(union v0oparg);	\
 	    } else {							\
@@ -94,6 +105,7 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 	    return V0_TEXT_FAULT;					\
 	}								\
     } while (0)
+#endif
 #endif /* defined(__GNUC__) */
 #define v0addop(op, str, narg)                                          \
     (vasaddop(#str, op, narg))
@@ -103,6 +115,8 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 
 #define v0setopbits(op, bits1, bits2, tab)                              \
     ((tab)[(op)] = (bits1) | ((bits2 << 16)))
+#define v0getopbits1(op, tab) ((tab)[(op)] & 0xffff)
+#define v0getopbits2(op, tab) (((tab)[(op)] >> 16) & 0xffff)
 
 #define v0initopbits(tab)                                               \
     do {                                                                \
@@ -126,11 +140,30 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 	v0setopbits(V0_LDR, V0_RIM_ARG, V0_R_ARG, tab);			\
 	v0setopbits(V0_STR, V0_RI_ARG, V0_RM_ARG, tab);			\
 	v0setopbits(V0_PSH, V0_RI_ARG, V0_R_ARG, tab);			\
-        v0setopbits(V0_PSM, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_PSM, V0_RI_ARG, 0, tab);                         \
         v0setopbits(V0_POP, V0_RI_ARG, V0_R_ARG, tab);                  \
-        v0setopbits(V0_POM, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_POM, V0_RI_ARG, 0, tab);                         \
         v0setopbits(V0_JMP, V0_RI_ARG, V0_R_ARG, tab);                  \
         v0setopbits(V0_JMR, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BIZ, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BNZ, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BLT, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BLE, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BGT, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BGE, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BIO, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BNO, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BIC, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BNC, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_CSR, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_BEG, V0_RI_ARG, V0_RIM_ARG, tab);                \
+        v0setopbits(V0_FIN, V0_RI_ARG, V0_RIM_ARG, tab);                \
+        v0setopbits(V0_RET, V0_RIM_ARG, 0, tab);                        \
+        v0setopbits(V0_IRD, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_IWR, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_ICF, V0_RI_ARG, V0_R_ARG, tab);                  \
+        v0setopbits(V0_CLI, V0_RI_ARG, 0, tab);                         \
+        v0setopbits(V0_STI, V0_RI_ARG, 0, tab);                         \
     } while (0)
 
 #define v0initops(tab)                                                  \
@@ -178,11 +211,13 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
         v0setop(V0_BEG, beg, 2, tab);                                   \
         v0setop(V0_FIN, fin, 2, tab);                                   \
         v0setop(V0_RET, ret, 1, tab);                                   \
-        v0setop(V0_IRD, ird, 1, tab);                                   \
-        v0setop(V0_IWR, iwr, 1, tab);                                   \
-        v0setop(V0_ICF, icf, 1, tab);                                   \
-        v0setop(V0_RST, rst, 1, tab);                                   \
-        v0setop(V0_HLT, hlt, 1, tab);                                   \
+        v0setop(V0_IRD, ird, 2, tab);                                   \
+        v0setop(V0_IWR, iwr, 2, tab);                                   \
+        v0setop(V0_ICF, icf, 2, tab);                                   \
+        v0setop(V0_CLI, cli, 1, tab);                                   \
+        v0setop(V0_STI, sti, 1, tab);                                   \
+        v0setop(V0_RST, rst, 0, tab);                                   \
+        v0setop(V0_HLT, hlt, 0, tab);                                   \
     } while (0)
 
 #define v0addops()                                                      \
@@ -202,7 +237,7 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
         v0addop(V0_AND, and, 2);                                        \
         v0addop(V0_XOR, xor, 2);                                        \
         v0addop(V0_LOR, lor, 2);                                        \
-        v0addop(V0_CRP, crp, 1);                                        \
+        v0addop(V0_CRP, crp, 2);                                        \
         v0addop(V0_MUL, mul, 2);                                        \
         v0addop(V0_MUL, muh, 2);                                        \
         v0addop(V0_LDR, ldr, 2);                                        \
@@ -229,15 +264,19 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
         v0addop(V0_BEG, beg, 2);                                        \
         v0addop(V0_FIN, fin, 2);                                        \
         v0addop(V0_RET, ret, 1);                                        \
-        v0addop(V0_IRD, ird, 1);                                        \
-        v0addop(V0_IWR, iwr, 1);                                        \
-        v0addop(V0_ICF, icf, 1);                                        \
-        v0addop(V0_RST, rst, 1);                                        \
-        v0addop(V0_HLT, hlt, 1);                                        \
+        v0addop(V0_IRD, ird, 2);                                        \
+        v0addop(V0_IWR, iwr, 2);                                        \
+        v0addop(V0_ICF, icf, 2);                                        \
+        v0addop(V0_CLI, cli, 1);                                        \
+        v0addop(V0_STI, sti, 1);                                        \
+        v0addop(V0_RST, rst, 0);                                        \
+        v0addop(V0_HLT, hlt, 0);                                        \
     } while (0)
 
 #define v0calcadr(reg, ofs, shift)                                      \
     ((reg) + ((ofs) << (shift)))
+#define v0calcjmp(reg, ofs, shift)                                      \
+    ((reg) + ((ofs) << (2 + (shift))))
 #define v0fetcharg(vm, reg, ofs, shift)                                 \
     (*(v0reg *)(&(vm)->mem[v0calcadr(reg, ofs, shift)]))
 #define v0getarg1(vm, op)                                               \
@@ -279,15 +318,14 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
         ? ((vm)->mem[(op)->val])                                        \
         : (((op)->adr == V0_DIR_ADR)                                    \
            ? ((vm)->mem[(op)->arg[0].adr])                              \
-           : ((vm)->mem[v0calcadr((op)->reg2, (op)->arg[0].ofs, (op)->parm)]))))
-#define v0getjmpofs(vm, op)                                             \
+           : ((vm)->mem[v0calcadr((op)->reg1, (op)->arg[0].ofs, (op)->parm)]))))
+#define v0getjmradr(vm, op)                                             \
     (((op)->adr == V0_REG_ADR)                                          \
-     ? ((vm)->mem[(vm)->regs[(op)->reg2]])                              \
+     ? (((vm)->mem[(vm)->regs[(op)->reg1]]))                            \
      : (((op)->adr == V0_IMM_ADR)                                       \
-        ? ((vm)->mem[(op)->val])                                        \
-        : (((op)->adr == V0_DIR_ADR)                                    \
-           ? ((vm)->mem[(op)->arg[0].adr])                              \
-           : ((vm)->mem[v0calcadr((op)->reg2, (op)->arg[0].ofs, (op)->parm)]))))
+        ? (v0calcjmp((vm)->regs[V0_PC_REG], (op)->val, (op)->parm))     \
+        : (v0calcjmp((vm)->regs[(op)->reg1], (op)->val, (op)->parm))))
+
 #define v0getioport(op) ((op)->val)
 
 static _V0OPFUNC_T
@@ -850,17 +888,21 @@ v0str(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
+/*
+ * PSH takes register ID to be pushed in op->val
+ */
 static _V0OPFUNC_T
 v0psh(struct v0 *vm, v0ureg pc)
 {
     struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg        src = v0getarg1(vm, op);
     v0ureg       sp = vm->regs[V0_SP_REG];
-    v0reg       *sptr = v0adrtoptr(vm, src);
-    v0reg       *dptr = v0adrtoptr(vm, sp);
+    v0reg        reg = op->val;
+    v0reg       *sptr = v0regtoptr(vm, reg);
+    v0reg       *dptr;
 
     sp -= sizeof(v0reg);
     pc += sizeof(struct v0op);
+    dptr = v0adrtoptr(vm, sp);
     if (op->adr == V0_REG_ADR) {
         v0addspeedcnt(4);
     } else {
@@ -874,25 +916,51 @@ v0psh(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
+/*
+ * PSM takes the lowest register ID to be pushed in op->val and shift count
+ * for number of registers in op->parm
+ */
 static _V0OPFUNC_T
 v0psm(struct v0 *vm, v0ureg pc)
 {
     struct v0op *op = v0adrtoptr(vm, pc);
     v0ureg       sp = vm->regs[V0_SP_REG];
-    v0reg        map = v0getarg1(vm, op);
-    v0reg       *sptr = v0regtoptr(vm, V0_R15_REG);
+    v0reg        lo = op->val;
+    v0reg        cnt = 4 << op->parm;
+    v0reg       *sptr = v0regtoptr(vm, lo);
     v0reg       *dptr = v0adrtoptr(vm, sp);
+    v0reg        ndx = lo;
+    v0reg        num;
 
     pc += sizeof(struct v0op);
-    v0addspeedcnt(8 * n);
-    while (map) {
-        if (map & 0x8000) {
-            dptr[0] = sptr[0];
-            dptr--;
-            sp--;
+    v0addspeedcnt(8 * cnt);
+    dptr -= cnt;
+    while (cnt) {
+        num = min(8, cnt);
+        switch (num) {
+            case 8:
+                dptr[7] = sptr[7];
+            case 7:
+                dptr[6] = sptr[6];
+            case 6:
+                dptr[5] = sptr[5];
+            case 5:
+                dptr[4] = sptr[4];
+            case 4:
+                dptr[3] = sptr[3];
+            case 3:
+                dptr[2] = sptr[2];
+            case 2:
+                dptr[1] = sptr[1];
+            case 1:
+                dptr[0] = sptr[0];
+            case 0:
+
+                break;
         }
-        map <<= 1;
-        sptr--;
+        sptr += num;
+        dptr += num;
+        cnt -= num;
     }
     vm->regs[V0_SP_REG] = sp;
     vm->regs[V0_PC_REG] = pc;
@@ -905,12 +973,13 @@ v0pop(struct v0 *vm, v0ureg pc)
 {
     struct v0op *op = v0adrtoptr(vm, pc);
     v0ureg       sp = vm->regs[V0_SP_REG];
-    v0reg       *src = v0adrtoptr(vm, sp);
-    v0reg       *dest = v0getadr2(vm, op);
+    v0reg        reg = op->val;
+    v0reg       *sptr = v0adrtoptr(vm, sp);
+    v0reg       *dest = v0regtoptr(vm, reg);
 
     pc += sizeof(struct v0op);
     sp += sizeof(v0reg);
-    *dest = *src;
+    *dest = *sptr;
     v0addspeedcnt(4);
     vm->regs[V0_SP_REG] = sp;
     vm->regs[V0_PC_REG] = pc;
@@ -923,20 +992,43 @@ v0pom(struct v0 *vm, v0ureg pc)
 {
     struct v0op *op = v0adrtoptr(vm, pc);
     v0ureg       sp = vm->regs[V0_SP_REG];
-    v0reg        map = v0getarg1(vm, op);
+    v0reg        lo = op->val;
+    v0reg        cnt = 4 << op->parm;
     v0reg       *sptr = v0adrtoptr(vm, sp);
-    v0reg       *dptr = v0regtoptr(vm, V0_R15_REG);
+    v0reg       *dptr = v0regtoptr(vm, lo);
+    v0reg        ndx = lo;
+    v0reg        num;
 
     pc += sizeof(struct v0op);
-    v0addspeedcnt(4 * n);
-    while (map) {
-        if (map & 0x8000) {
-            dptr[0] = sptr[0];
-            sptr--;
-            sp--;
+    v0addspeedcnt(8 * cnt);
+    sptr -= cnt;
+    sp -= cnt;
+    while (cnt) {
+        num = min(8, cnt);
+        switch (num) {
+            case 8:
+                dptr[7] = sptr[7];
+            case 7:
+                dptr[6] = sptr[6];
+            case 6:
+                dptr[5] = sptr[5];
+            case 5:
+                dptr[4] = sptr[4];
+            case 4:
+                dptr[3] = sptr[3];
+            case 3:
+                dptr[2] = sptr[2];
+            case 2:
+                dptr[1] = sptr[1];
+            case 1:
+                dptr[0] = sptr[0];
+            case 0:
+
+                break;
         }
-        map <<= 1;
-        dptr--;
+        cnt -= num;
+        sptr += num;
+        dptr += num;
     }
     vm->regs[V0_SP_REG] = sp;
     vm->regs[V0_PC_REG] = pc;
@@ -960,7 +1052,7 @@ static _V0OPFUNC_T
 v0jmr(struct v0 *vm, v0ureg pc)
 {
     struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg        ofs = v0getjmpofs(vm, op);
+    v0reg        ofs = v0getjmradr(vm, op);
 
     pc += ofs;
     v0addspeedcnt(8);
@@ -1431,6 +1523,22 @@ v0iwr(struct v0 *vm, v0ureg pc)
 
 static _V0OPFUNC_T
 v0icf(struct v0 *vm, v0ureg pc)
+{
+    struct v0op *op = v0adrtoptr(vm, pc);
+
+    return pc;
+}
+
+static _V0OPFUNC_T
+v0sti(struct v0 *vm, v0ureg pc)
+{
+    struct v0op *op = v0adrtoptr(vm, pc);
+
+    return pc;
+}
+
+static _V0OPFUNC_T
+v0cli(struct v0 *vm, v0ureg pc)
 {
     struct v0op *op = v0adrtoptr(vm, pc);
 

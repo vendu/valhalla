@@ -9,7 +9,9 @@
 #define    INLINE __inline__ __attribute__ ((__always_inline__))
 #define    ALIGNED(a) __attribute__ ((__aligned__(a)))
 
-#define    rounduppow2(a, b2) (((a) + ((b2) - 0x01)) & -(b2))
+#define    roundup2(a, b2) (((a) + ((b2) - 0x01)) & -(b2))
+#define    min(a, b) ((b) ^ (((a) ^ (b)) & -((a) < (b))))
+#define    max(a, b) ((a) ^ (((a) ^ (b)) & -((a) < (b))))
 
 #define tscmp(ts1, ts2)                                                \
     (((ts2).tv_sec - (ts1).tv_nsec) * 1000000000                       \

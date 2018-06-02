@@ -60,7 +60,7 @@ struct vaslabel {
 
 struct vasvalue {
     vasword val;
-    uint8_t size;
+    uint8_t sft;
 };
 
 struct vassymrec {
@@ -101,7 +101,7 @@ struct vastoken {
     struct vastoken     *next;
     unsigned long        type;
     vasword              val;
-    vasword              size;
+    vasword              sft;
     vasword              unit;
 #if (VASDB)
     uint8_t             *file;
@@ -117,7 +117,7 @@ struct vastoken {
         struct vasndx    ndx;
         char            *str;
         uint8_t          ch;
-        uint8_t          size;
+        uint8_t          sft;
         vasuword         reg;
     } data;
 };

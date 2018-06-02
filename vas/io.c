@@ -6,10 +6,10 @@
 #include <vas/vas.h>
 #include <vas/io.h>
 
-extern char           *vaslinebuf;
-extern char           *vasstrbuf;
 extern struct readbuf *vasreadbuftab;
 extern long            vasnreadbuf;
+extern char           *vaslinebuf;
+extern char           *vasstrbuf;
 
 void
 vasinitbuf(void)
@@ -20,6 +20,7 @@ vasinitbuf(void)
 
     vaslinebuf = malloc(VAS_LINE_BUFSIZE);
     vasstrbuf = malloc(VAS_LINE_BUFSIZE);
+    vasnreadbuf = VAS_READ_BUFS;
 #if (VASBUF) && !(VASMMAP)
     vasreadbuftab = malloc(vasnreadbuf * sizeof(struct readbuf));
     for (l = 0 ; l < vasnreadbuf ; l++) {

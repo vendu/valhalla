@@ -17,7 +17,10 @@ extern long   vasaddop(const char *str, uint8_t code, uint8_t narg);
 
 extern struct vasop    *v0optab[256];
 extern char            *vaslinebuf;
+extern long             vasreadbufcur;
 struct v0              *v0vm;
+extern vasuword         _startadr;
+extern vasuword         _startset;
 #if defined(V0_GAME)
 static long long        v0speedcnt;
 #endif
@@ -81,6 +84,15 @@ v0initio(struct v0 *vm)
     return;
 }
 
+#define V0_TRAP_PERMS (V0_MEM_PRESENT | V0_MEM_EXEC                     \
+                       | V0_MEM_MAP | V0_MEM_TRAP | V0_MEM_SYS)
+#define V0_CODE_PERMS (V0_MEM_PRESENT | V0_MEM_READ | V0_MEM_EXEC)
+#define V0_DATA_PERMS (V0_MEM_READ | V0_MEM_WRITE | V0_MEM_MAP)
+#define V0_KERN_PERMS (V0_MEM_PRESENT | V0_MEM_EXEC | V0_MEM_SYS        \
+                       | V0_MEM_GLOBAL)
+#define V0_STK_PERMS  (V0_MEM_PRESENT | V0_MEM_READ | V0_MEM_WRITE      \
+                       | V0_MEM_STK)
+
 struct v0 *
 v0init(struct v0 *vm)
 {
@@ -96,7 +108,7 @@ v0init(struct v0 *vm)
     ptr = calloc(V0_MAX_IOPORTS, sizeof(struct v0iofuncs));
     if (ptr) {
         if (!vm) {
-            vm = malloc(sizeof(struct v0));
+            vm = calloc(1, sizeof(struct v0));
             if (!vm) {
                 free(mem);
                 free(ptr);
@@ -119,8 +131,8 @@ v0init(struct v0 *vm)
             return NULL;
         }
         fastuf16divuf16gentab(ptr, 0xffff);
-#endif
         vm->divu16tab = ptr;
+#endif
         ptr = calloc(vmnpg, sizeof(v0memflg));
         if (!ptr) {
             free(mem);
@@ -132,11 +144,14 @@ v0init(struct v0 *vm)
         }
         vm->mem = mem;
         vm->membits = ptr;
-        v0initseg(vm, V0_PAGE_SIZE, vmnpg,
-                  V0_MEM_PRESENT | V0_MEM_READ | V0_MEM_WRITE | V0_MEM_EXEC);
+        v0initseg(vm, 0, 1, V0_TRAP_PERMS);
+        v0initseg(vm, V0_PAGE_SIZE, vmnpg / 8 - 1, V0_CODE_PERMS);
+        v0initseg(vm, vmnpg * PAGESIZE / 4, vmnpg / 2, V0_DATA_PERMS);
+        v0initseg(vm, vmnpg * PAGESIZE * 3 / 4, vmnpg / 4 - 8, V0_KERN_PERMS);
+        v0initseg(vm, vmnpg * (PAGESIZE - 8), 8, V0_STK_PERMS);
         v0initio(vm);
         vm->regs[V0_FP_REG] = 0x00000000;
-        vm->regs[V0_SP_REG] = V0_MEM_SIZE;
+        vm->regs[V0_SP_REG] = V0_MEM_SIZE - 1;
     }
     v0vm = vm;
 
@@ -147,7 +162,7 @@ int
 v0loop(struct v0 *vm, v0ureg pc)
 {
     static _V0OPTAB_T  jmptab[V0_MAX_INSTS];
-    struct v0op       *op = (struct v0op *)&vm->mem[pc];
+    struct v0op       *op = v0adrtoptr(vm, pc);
 
     v0initops(jmptab);
 
@@ -338,6 +353,14 @@ v0loop(struct v0 *vm, v0ureg pc)
                 pc = v0icf(vm, pc);
 
                 opjmp(vm, pc);
+            v0opsti:
+                pc = v0sti(vm, pc);
+
+                opjmp(vm, pc);
+            v0opcli:
+                pc = v0cli(vm, pc);
+
+                opjmp(vm, pc);
             v0oprst:
                 pc = v0rst(vm, pc);
 
@@ -383,14 +406,20 @@ main(int argc, char *argv[])
         v0addops();
         vasinit();
         for (ndx = 1 ; ndx < argc ; ndx++) {
+#if (VASBUF) && !(VASMMAP)
+            vasreadfile(argv[ndx], adr, ++vasreadbufcur);
+#else
             vasreadfile(argv[ndx], adr);
+#endif
             adr = vastranslate(adr);
             vasresolve();
             vasfreesyms();
             if (!vm->regs[V0_PC_REG]) {
-                vm->regs[V0_PC_REG] = adr;
+                vm->regs[V0_PC_REG] = _startadr;
             }
-            ret = v0loop(vm, adr);
+            if (_startset) {
+                ret = v0loop(vm, _startadr);
+            }
         }
 
         exit(ret);

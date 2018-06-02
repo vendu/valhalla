@@ -63,9 +63,10 @@ struct v0iofuncs {
 #define V0_SP_REG        (V0_INT_REGS + 2) // stack pointer
 #define V0_MSW_REG       (V0_INT_REGS + 3) // machine status word
 #define V0_MFW_REG       (V0_INT_REGS + 4) // machine feature word
-#define V0_IMR_REG       (V0_INT_REGS + 5) // interrupt-mask (1 -> block)
+#define V0_IMR_REG       (V0_INT_REGS + 5) // interrupt-mask (1-bit for enabled)
 #define V0_IVR_REG       (V0_INT_REGS + 6) // interrupt vector address
 #define V0_PDR_REG       (V0_INT_REGS + 7) // page directory address
+/* V0_SEG_REG stores # of segments (max 256) in high-order 8-bit byte */
 #define V0_SEG_REG       (V0_INT_REGS + 8) // segment table address
 #define V0_SYS_REGS      16
 /* system register IDs */
@@ -89,11 +90,11 @@ struct v0iofuncs {
 #define V0_MSW_ML_BIT    (1 << 30) // memory-bus lock-flag
 #define V0_MSW_SF_BIT    (1 << 31) // signed resuit; arg1 > arg2
 /* program segments */
-#define V0_TEXT_SEG      0x00 // code
-#define V0_RODATA_SEG    0x01 // read-only data (string literals etc.)
+#define V0_TRAP_SEG      0x00
+#define V0_CODE_SEG      0x01 // code, read-only data such as literals
 #define V0_DATA_SEG      0x02 // read-write (initialised) data
-#define V0_BSS_SEG       0x03 // uninitialised (zeroed) runtime-allocated data
-#define V0_STACK_SEG     0x04
+#define V0_KERN_SEG      0x03 // code to implement system [call] interface
+#define V0_STK_SEG       0x04
 #define V0_SEGS          8
 /* option-bits for flg-member */
 #define V0_TRACE         0x01
@@ -161,8 +162,8 @@ union v0oparg {
 #define v0regtoptr(vm, reg)  ((void *)(&(vm)->regs[(reg)]))
 
 #define V0_REG_BIT       (1 << V0_REG_ADR)
-#define V0_IMM_BIT       (1 << V0_IMM_ADR)
 #define V0_DIR_BIT       (1 << V0_DIR_ADR)
+#define V0_IMM_BIT       (1 << V0_IMM_ADR)
 #define V0_NDX_BIT       (1 << V0_NDX_ADR)
 #define V0_R_ARG         V0_REG_BIT
 #define V0_I_ARG         (V0_IMM_BIT | V0_DIR_BIT)
@@ -173,8 +174,9 @@ union v0oparg {
 
 /* addressing modes */
 #define V0_REG_ADR       0x00 // %reg, argument in register
-#define V0_IMM_ADR       0x01 // $val, address in val-field
-#define V0_DIR_ADR       0x02 // $val, address follows opcode
+#define V0_DIR_ADR       0x01 // $val, address follows opcode
+#define V0_IMM_ADR       0x02 // $val, address in val-field
+#define V0_PIC_ADR       V0_IMM_ADR // PC-relative addressing-mode
 #define V0_NDX_ADR       0x03 // %reg[ndx << op->parm], ndx follows opcode
 /* parm-field */
 #define V0_TRAP_BIT      0x01 // breakpoint
@@ -186,7 +188,7 @@ union v0oparg {
 /* NOP is declared as all 1-bits */
 #define V0_NOP_CODE      (~UINT32_C(0))
 #define v0opisnop(op)    (*(uint32_t *)(op) == V0_NOP_CODE)
-#define V0_SIGNED_BIT    (1 << 2)
+#define V0_SIGNED_BIT    (1 << 3)
 #define v0opissigned(op) ((op)->parm & V0_SIGNED_BIT)
 
 /* I/O-operations always have a single register argument */
@@ -195,17 +197,22 @@ struct v0op {
     unsigned int   reg1 : 4; // register argument #1 ID
     unsigned int   reg2 : 4; // register argument #2 ID
     unsigned int   adr  : 2; // addressing mode
-    unsigned int   parm : 3; // address scale shift count
-    unsigned int   flg  : 3; // instruction flags
+    unsigned int   parm : 2; // address scale shift count
+    unsigned int   flg  : 4; // instruction flags
     unsigned int   val  : 8; // immediate value; shift count, register range
     union v0oparg  arg[EMPTY]; // possible argument value
 };
 
 /* memory parameters */
-#define V0_MEM_EXEC      0x01
-#define V0_MEM_WRITE     0x02
-#define V0_MEM_READ      0x04
-#define V0_MEM_PRESENT   0x08
+#define V0_MEM_TRAP      0x00   // traditionally, interrupt-vector @ 0x00000000
+#define V0_MEM_EXEC      0x01   // execute-permission
+#define V0_MEM_WRITE     0x02   // write-permission
+#define V0_MEM_READ      0x04   // read-permission
+#define V0_MEM_PRESENT   0x08   // memory present in physical core
+#define V0_MEM_MAP       0x10   // memory may be mapped across multiple users
+#define V0_MEM_SYS       0x20   // system code for user programs
+#define V0_MEM_GLOBAL    0x40   // process-global segment
+#define V0_MEM_STK       0x80   // segment grows downward in core
 
 #define V0_VTD_PATH      "vtd.txt"
 /* predefined I/O ports */
@@ -226,13 +233,14 @@ struct v0op {
 #define V0_NTRAP         256
 
 /* USER [programmable] traps */
-#define V0_SYSTEM_TRAP   0xf0
 #define v0trapisuser(t)  (((t) & V0_SYSTEM_TRAP) == 0)
 #define V0_BREAK_POINT   0x00 // debugging breakpoint; highest priority
 #define V0_TMR_INTR      0x01 // timer interrupt
 #define V0_KBD_INTR      0x02 // keyboard
 #define V0_PTR_INTR      0x03 // mouse, trackpad, joystick, ...
 #define V0_PAGE_FAULT    0x04 // reserved for later use (paging); adr | bits
+#define V0_SYS_TRAP_BIT  0x10 // denotes system interrupts
+#define V0_SYS_TRAP_MAX  0x3f // maximum system interrupt number
 
 /* SYSTEM TRAPS */
 /* aborts */
@@ -242,11 +250,12 @@ struct v0op {
 #define V0_TEXT_FAULT    0x10 // invalid address for instruction; adr
 #define V0_INV_MEM_READ  0x11 // memory read error; push address
 #define V0_INV_MEM_WRITE 0x12 // memory write error
-#define V0_INV_MEM_ADR   0x13 // invalid memory addressing mode; type
+#define V0_INV_MEM_ADR   0x13 // invalid memory address; segment violation
 /* instruction-related problems */
 /* instruction format violations - terminate process */
 #define V0_INV_OP_CODE   0x20 // invalid operation; code
 #define V0_INV_OP_ARG    0x21 // invalid argument; (type << 1) | num
+#define V0_INV_OP_ADR    0x22 // invalid addressing-mode for instruction
 /* I/O-related exceptions */
 #define V0_IO_TRAP       0x20 // I/O traps
 #define V0_INV_IO_READ   0x20 // no permission to read from input port; port
