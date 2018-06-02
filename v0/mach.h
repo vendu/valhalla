@@ -84,7 +84,7 @@
 #define V0_NOT 0x0c //   r       reverse all bits
 #define V0_AND 0x0d //   ri, r   logical AND
 #define V0_XOR 0x0e //   ri, r   logical exclusive OR
-#define V0_LOR 0x0f //   ri, r   logical OR
+#define V0_IOR 0x0f //   ri, r   logical OR
 
 /*
  * MULTIPLICATION AND DIVISION

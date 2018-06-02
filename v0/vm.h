@@ -17,7 +17,7 @@ typedef int32_t  v0reg;  // signed user-register type
 typedef uint32_t v0ureg; // unsigned user-register type
 typedef v0ureg   v0memadr; // memory address
 typedef uint8_t  v0memflg;
-typedef void     v0iofunc_t(struct v0 *vm, uint16_t port, uint8_t reg);
+typedef void     v0iofunc_t(struct v0 *vm, uint8_t port, v0reg reg);
 
 struct v0iofuncs {
     v0iofunc_t *rdfunc;
@@ -210,8 +210,8 @@ struct v0op {
 #define V0_MEM_READ      0x04   // read-permission
 #define V0_MEM_PRESENT   0x08   // memory present in physical core
 #define V0_MEM_MAP       0x10   // memory may be mapped across multiple users
-#define V0_MEM_SYS       0x20   // system code for user programs
-#define V0_MEM_GLOBAL    0x40   // process-global segment
+#define V0_MEM_SYS       0x20   // system code
+#define V0_MEM_TLS       0x40   // thread-local storage
 #define V0_MEM_STACK     0x80   // segment grows downward in core
 
 #define V0_VTD_PATH      "vtd.txt"
@@ -260,6 +260,7 @@ struct v0op {
 #define V0_INV_OP_CODE   0x20 // invalid operation; code
 #define V0_INV_OP_ARG    0x21 // invalid argument; (type << 1) | num
 #define V0_INV_OP_ADR    0x22 // invalid addressing-mode for instruction
+#define V0_INV_OP_
 /* I/O-related exceptions */
 #define V0_IO_TRAP       0x20 // I/O traps
 #define V0_INV_IO_READ   0x20 // no permission to read from input port; port

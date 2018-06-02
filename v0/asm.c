@@ -105,7 +105,7 @@ vasaddop(const char *str, uint8_t code, uint8_t narg)
 }
 
 static struct vasop *
-vasfindop(char *str, vasword *retsize, char **retptr)
+vasfindop(char *str, vasword *retsft, char **retptr)
 {
     char         *cptr = (char *)str;
     struct vasop *op = NULL;
@@ -130,14 +130,14 @@ vasfindop(char *str, vasword *retsize, char **retptr)
             sft = op->sft;
         }
     }
-    *retsize = sft;
+    *retsft = sft;
     *retptr = cptr;
 
     return op;
 }
 
 struct vasop *
-vasgetop(char *str, vasword *retsize, char **retptr)
+vasgetop(char *str, vasword *retsft, char **retptr)
 {
     struct vasop *op = NULL;
     vasword       sft = 0;
@@ -147,7 +147,7 @@ vasgetop(char *str, vasword *retsize, char **retptr)
 #endif
     op = vasfindop(str, &sft, &str);
     if (op) {
-        *retsize = sft;
+        *retsft = sft;
         *retptr = str;
     }
 
@@ -155,7 +155,7 @@ vasgetop(char *str, vasword *retsize, char **retptr)
 }
 
 vasword
-vasgetreg(char *str, vasword *retsize, char **retptr)
+vasgetreg(char *str, vasword *retsft, char **retptr)
 {
     vasword reg = -1;
     vasword sft = 0;
@@ -191,10 +191,10 @@ vasgetreg(char *str, vasword *retsize, char **retptr)
         if ((*str) && (*str == ',' || isspace(*str))) {
             str[0] = '\0';
             str++;
-            *retsize = sft;
+            *retsft = sft;
             *retptr = str;
         } else if ((*str) && *str == ')') {
-            *retsize = sft;
+            *retsft = sft;
             *retptr = str;
         } else {
             fprintf(stderr, "invalid register name %s\n", str);
@@ -236,7 +236,6 @@ vasprocinst(struct vastoken *token, v0memadr adr,
             v0memadr *retadr)
 {
     struct v0op      *op = (struct v0op *)&v0vm->mem[adr];
-    //    v0memadr          opadr = rounduppow2(adr, 4);
     struct vastoken  *token1 = NULL;
     struct vastoken  *token2 = NULL;
     struct vastoken  *retval = NULL;
@@ -245,24 +244,11 @@ vasprocinst(struct vastoken *token, v0memadr adr,
     vasword           val;
     vasword           flg;
     uint8_t           narg = token->data.inst.narg;
-//    uint8_t           len = token->data.op.op == V0NOP ? 1 : 4;
-    uint8_t           sft = 1;
+    uint8_t           sft = token->data.inst.sft;
 
     if (!vasinitflg) {
         vasinitops();
     }
-#if 0
-    while (adr < opadr) {
-#if (V032BIT)
-        *(uint32_t *)op = UINT32_C(~0);
-#else
-        *(uint64_t *)op = UINT32_C(~0);
-#endif
-        adr += sizeof(struct v0op);
-        op++;
-    }
-//    adr = opadr;
-#endif
 #if (VASDB)
     vasaddline(adr, token->data.inst.data, token->file, token->line);
 #endif
@@ -274,6 +260,7 @@ vasprocinst(struct vastoken *token, v0memadr adr,
     } else if (!narg) {
         retval = token->next;
         op->code = token->data.inst.code;
+        vasfreetoken(token);
     } else {
         token1 = token->next;
         vasfreetoken(token);
@@ -295,7 +282,7 @@ vasprocinst(struct vastoken *token, v0memadr adr,
                         op->val = val & 0xff;
                         adr += sizeof(struct v0op);
                     } else {
-                        sft = token->data.value.sft;
+                        //                        sft = token->data.value.sft;
                         op->adr = V0_DIR_ADR;
                         adr += sizeof(struct v0op) + sizeof(union v0oparg);
                         op->parm = sft;
@@ -383,7 +370,7 @@ vasprocinst(struct vastoken *token, v0memadr adr,
                                 }
                                 op->val = val & 0xff;
                             } else {
-                                sft = token->data.value.sft;
+                                //                                sft = token->data.value.sft;
                                 op->adr = V0_DIR_ADR;
                                 op->arg[0].i32 = val;
                                 op->parm = sft;

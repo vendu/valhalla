@@ -2,6 +2,7 @@
 
 #include <vas/conf.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <vas/vas.h>
 #include <vas/io.h>

@@ -4,12 +4,13 @@
 #include <sys/time.h>
 //#include <zero/prof.h>
 #include <v0/vm.h>
+#include <v0/io.h>
 #include <v0/dev.h>
 
 static struct v0tmr v0tmr;
 
 void
-v0readkbd(struct v0 *vm, uint16_t port, uint8_t reg)
+v0readkbd(struct v0 *vm, uint8_t port, v0ureg reg)
 {
     v0reg *dest = v0regtoptr(vm, reg);
     v0reg  key = getchar();
@@ -23,29 +24,23 @@ v0readkbd(struct v0 *vm, uint16_t port, uint8_t reg)
 }
 
 void
-v0writetty(struct v0 *vm, uint16_t port, uint8_t reg)
+v0writetty(struct v0 *vm, uint8_t port, v0ureg val)
 {
-    v0reg *src = v0regtoptr(vm, reg);
-    int    ch = *src;
-
-    printf("%uc", ch);
+    printf("%uc", val & 0xff);
 
     return;
 }
 
 void
-v0writeerr(struct v0 *vm, uint16_t port, uint8_t reg)
+v0writeerr(struct v0 *vm, uint8_t port, v0ureg val)
 {
-    v0reg *src = v0regtoptr(vm, reg);
-    int    ch = *src;
-
-    fprintf(stderr, "%uc", ch);
+    fprintf(stderr, "%uc", val & 0xff);
 
     return;
 }
 
 void
-v0readrtc(struct v0 *vm, uint16_t port, uint8_t reg)
+v0readrtc(struct v0 *vm, uint8_t port, v0ureg reg)
 {
     v0reg  *dest = v0regtoptr(vm, reg);
     time_t  tm = time(NULL);
@@ -57,13 +52,13 @@ v0readrtc(struct v0 *vm, uint16_t port, uint8_t reg)
 }
 
 void
-v0readtmr(struct v0 *vm, uint16_t port, uint8_t reg)
+v0readtmr(struct v0 *vm, uint8_t port, v0ureg reg)
 {
     v0wreg  w = vm->regs[reg];
     v0reg  *dest = v0regtoptr(vm, reg);
     v0wreg  val = ~INT64_C(0);
 
-    if (!(w & V0_TMR_HIRES)) {
+    if (!(w & V0_HIRES_TMR)) {
         struct timeval  tv = { 0 };
 
         gettimeofday(&tv, NULL);
@@ -87,11 +82,9 @@ v0readtmr(struct v0 *vm, uint16_t port, uint8_t reg)
 }
 
 void
-v0conftmr(struct v0 *vm, uint16_t port, uint8_t reg)
+v0conftmr(struct v0 *vm, uint8_t port, v0ureg val)
 {
-    v0wreg w = vm->regs[reg];
-
-    if (w & V0_TMR_HIRES) {
+    if (val & V0_HIRES_TMR) {
         /*
          * submicrosecond timer facilities
          * - TODO: support HPET on X86
@@ -100,16 +93,21 @@ v0conftmr(struct v0 *vm, uint16_t port, uint8_t reg)
     } else {
         v0tmr.mode &= ~V0_HIRES_TMR;
     }
+    if (val & V0_INTERVAL_TMR) {
+        v0tmr.mode |= V0_INTERVAL_TMR;
+        v0tmr.freq = val & 0xff;
+    }
+
+    return;
 }
 
 void
-v0writevtd(struct v0 *vm, uint16_t port, uint8_t reg)
+v0writevtd(struct v0 *vm, uint8_t port, v0ureg val)
 {
-    int   ch = vm->regs[reg] & 0xff;
     FILE *fp = vm->vtdfp;
     int   ret;
 
-    ret = fputc(ch, fp) == EOF;
+    ret = fputc(val & 0xff, fp);
     if (ret != EOF) {
 
         return;

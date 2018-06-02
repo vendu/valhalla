@@ -27,8 +27,8 @@
 extern struct v0       *v0vm;
 
 /* vasgetop() is machine-specific */
-struct vasop           * vasgetop(char *str, vasword *retsize, char **retptr);
-extern vasword           vasgetreg(char *str, vasword *retsize,
+struct vasop           * vasgetop(char *str, vasword *retsft, char **retptr);
+extern vasword           vasgetreg(char *str, vasword *retsft,
                                    char **retptr);
 extern struct vasop    * vasfindop(const char *str);
 static char            * vasgetlabel(char *str, char **retptr);
@@ -64,7 +64,7 @@ static struct vaslabel  *vasglobhash[VASNHASH];
 struct vasline          *vaslinehash[VASNHASH];
 #endif
 
-vastokfunc_t            *vasktokfunctab[VASNTOKEN]
+static vastokfunc_t *vastokfunctab[VASNTOKEN]
 = {
     NULL,               // uninitialized (zero)
     vasprocvalue,
@@ -1350,9 +1350,9 @@ vastranslate(vasuword base)
 
     while (token) {
         vasprinttoken(token);
-        func = vasktokfunctab[token->type];
+        func = vastokfunctab[token->type];
         if (func) {
-            fprintf(stderr, "HANDLING token of type %s (%ld)\n", vastoknametab[token->type], token->type);
+            //            fprintf(stderr, "HANDLING token of type %s (%ld)\n", vastoknametab[token->type], token->type);
 #if (VASALIGN) && 0
             adr = vasaligntok(adr, token->type);
 #endif
@@ -1364,7 +1364,7 @@ vastranslate(vasuword base)
         } else if (token) {
             fprintf(stderr, "stray token of type %s (%ld) found\n",
                     vastoknametab[token->type], token->type);
-            vasprinttoken(token);
+            // vasprinttoken(token);
 
             exit(1);
         }

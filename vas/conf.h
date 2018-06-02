@@ -14,24 +14,7 @@
 #define PAGESIZE         4096
 #define VAS_READ_BUFS    32
 
-#if defined(V0) && 0
-#include <v0/mach.h>
-#include <v0/vm.h>
-#define VAS32BIT    1
-#define VASNOP      V0_NOP
-#define VASREGINDEX 0x40000000U
-#define VASREGINDIR 0x80000000U
-typedef struct v0op   vasop_t;
-typedef union v0oparg vasarg_t;
-#endif
 #define vasadrtoptr(adr) (&v0vm->mem[adr])
-
-#if 0
-/* assembler features */
-#undef VASALIGN
-/* align instructions and data on virtual machine word boundaries */
-#define VASALIGN 1
-#endif
 
 /*
  * choose input file buffering scheme

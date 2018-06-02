@@ -17,6 +17,7 @@
 #include <v0/vm.h>
 #include <vas/vas.h>
 
+#define V0_HALTED                   0xffffffffU // special PC-value
 #define V0_OP_INVAL                 NULL
 #define V0_ADR_INVAL                0x00000000
 #define V0_CNT_INVAL                (-1)
@@ -75,8 +76,13 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 #define opjmp(vm, pc)                                                   \
     do {								\
         struct v0op *_op = v0adrtoptr(vm, pc);				\
-									\
+                                                                        \
+        if (pc == V0_HALTED) {                                          \
+                                                                        \
+            exit(1);                                                    \
+        }                                                               \
 	if (v0opisvalid(_op, pc)) {					\
+            v0disasm(vm, _op, pc);                                      \
 	    goto *jmptab[(_op)->code];					\
 	} else {							\
 	    v0doxcpt(V0_TEXT_FAULT);					\
@@ -134,7 +140,7 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 	v0setopbits(V0_NOT, V0_RI_ARG, V0_R_ARG, tab);			\
 	v0setopbits(V0_AND, V0_RI_ARG, V0_R_ARG, tab);			\
 	v0setopbits(V0_XOR, V0_RI_ARG, V0_R_ARG, tab);			\
-	v0setopbits(V0_LOR, V0_RI_ARG, V0_R_ARG, tab);			\
+	v0setopbits(V0_IOR, V0_RI_ARG, V0_R_ARG, tab);			\
 	v0setopbits(V0_CRP, V0_RI_ARG, V0_R_ARG, tab);			\
 	v0setopbits(V0_MUL, V0_RI_ARG, V0_R_ARG, tab);			\
 	v0setopbits(V0_MUL, V0_RI_ARG, V0_R_ARG, tab);			\
@@ -183,7 +189,7 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
         v0setop(V0_NOT, not, 1, tab);                                   \
         v0setop(V0_AND, and, 2, tab);                                   \
         v0setop(V0_XOR, xor, 2, tab);                                   \
-        v0setop(V0_LOR, lor, 2, tab);                                   \
+        v0setop(V0_IOR, ior, 2, tab);                                   \
         v0setop(V0_CRP, crp, 1, tab);                                   \
         v0setop(V0_MUL, mul, 2, tab);                                   \
         v0setop(V0_MUL, muh, 2, tab);                                   \
@@ -238,7 +244,7 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
         v0addop(V0_NOT, not, 1);                                        \
         v0addop(V0_AND, and, 2);                                        \
         v0addop(V0_XOR, xor, 2);                                        \
-        v0addop(V0_LOR, lor, 2);                                        \
+        v0addop(V0_IOR, ior, 2);                                        \
         v0addop(V0_CRP, crp, 2);                                        \
         v0addop(V0_MUL, mul, 2);                                        \
         v0addop(V0_MUL, muh, 2);                                        \
@@ -641,7 +647,7 @@ v0xor(struct v0 *vm, v0ureg pc)
 }
 
 static _V0OPFUNC_T
-v0lor(struct v0 *vm, v0ureg pc)
+v0ior(struct v0 *vm, v0ureg pc)
 {
     struct v0op *op = v0adrtoptr(vm, pc);
     v0reg       *dptr = v0getadr2(vm, op);
@@ -734,17 +740,12 @@ v0ldr(struct v0 *vm, v0ureg pc)
 {
     struct v0op *op = v0adrtoptr(vm, pc);
     v0reg        reg;
-    v0reg       *adr = v0getadr1(vm, op);
-    v0reg        src = 0;
-    v0ureg       usrc = 0;
     v0reg        parm = op->parm;
     v0reg       *dptr = v0regtoptr(vm, op->reg2);
-    v0reg       *sptr;
+    v0reg       *sptr = NULL;
+    v0reg        src = 0;
     v0reg        mask;
 
-    if (!adr) {
-        v0doxcpt(V0_INV_MEM_ADR);
-    }
     if (op->adr == V0_REG_ADR || op->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0op);
     } else {
@@ -752,7 +753,7 @@ v0ldr(struct v0 *vm, v0ureg pc)
     }
     if (op->adr == V0_REG_ADR) {
         reg = op->reg1;
-        mask = 1 << (parm + CHAR_BIT);
+        mask = CHAR_BIT << parm;
         sptr = v0regtoptr(vm, reg);
         mask--;
         src = *sptr;
@@ -764,43 +765,46 @@ v0ldr(struct v0 *vm, v0ureg pc)
         if (v0opissigned(op)) {
             switch (parm) {
                 case 0:
-                    src = *(int8_t *)adr;
+                    src = *(int8_t *)sptr;
 
                     break;
                 case 1:
-                    src = *(int16_t *)adr;
+                    src = *(int16_t *)sptr;
 
                     break;
                 case 2:
-                    src = *(int32_t *)adr;
+                    src = *(int32_t *)sptr;
 
                     break;
+#if 0
                 case 3:
-                    v0doxcpt(V0_INV_MEM_READ);
+                    wsrc = *(int64_t *)sptr;
 
                     break;
+#endif
             }
             *dptr = src;
         } else {
             switch (op->parm) {
                 case 0:
-                    usrc = *(uint8_t *)adr;
+                    *(v0ureg *)dptr = *(uint8_t *)sptr;
 
                     break;
                 case 1:
-                    usrc = *(uint16_t *)adr;
+                    *(v0ureg *)dptr = *(uint16_t *)sptr;
 
                     break;
                 case 2:
-                    usrc = *(uint32_t *)adr;
+                    *(v0ureg *)dptr = *(uint32_t *)sptr;
 
                     break;
+#if 0
                 case 3:
-                    v0doxcpt(V0_INV_MEM_READ);
+                    uwsrc = *(uint64_t *)sptr;
 
                     break;
+#endif
             }
-            *(v0ureg *)dptr = usrc;
         }
     }
     vm->regs[V0_PC_REG] = pc;
@@ -1518,7 +1522,22 @@ v0ird(struct v0 *vm, v0ureg pc)
 static _V0OPFUNC_T
 v0iwr(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0op      *op = v0adrtoptr(vm, pc);
+    uint8_t           port = op->val;
+    v0reg             parm = op->parm;
+    struct v0iofuncs *funcs = vm->iovec;
+    v0reg             val;
+
+    if (op->adr == V0_REG_ADR) {
+        pc += sizeof(struct v0op);
+        val = vm->regs[op->reg2];
+    } else {
+        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        val = v0getarg1(vm, op);
+    }
+    if (funcs[port].wrfunc) {
+        funcs[port].wrfunc(vm, port, val);
+    }
 
     return pc;
 }
@@ -1593,7 +1612,7 @@ static _V0OPFUNC_T
 v0hlt(struct v0 *vm, v0ureg pc)
 {
 
-    return 0xffffffffU;
+    return V0_HALTED;
 }
 
 #endif /* __V0_OP_H__ */
