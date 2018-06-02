@@ -84,14 +84,14 @@ v0initio(struct v0 *vm)
     return;
 }
 
-#define V0_TRAP_PERMS (V0_MEM_PRESENT | V0_MEM_EXEC                     \
-                       | V0_MEM_MAP | V0_MEM_TRAP | V0_MEM_SYS)
-#define V0_CODE_PERMS (V0_MEM_PRESENT | V0_MEM_READ | V0_MEM_EXEC)
-#define V0_DATA_PERMS (V0_MEM_READ | V0_MEM_WRITE | V0_MEM_MAP)
-#define V0_KERN_PERMS (V0_MEM_PRESENT | V0_MEM_EXEC | V0_MEM_SYS        \
-                       | V0_MEM_GLOBAL)
-#define V0_STK_PERMS  (V0_MEM_PRESENT | V0_MEM_READ | V0_MEM_WRITE      \
-                       | V0_MEM_STK)
+#define V0_TRAP_PERMS  (V0_MEM_PRESENT | V0_MEM_EXEC                    \
+                        | V0_MEM_MAP | V0_MEM_TRAP | V0_MEM_SYS)
+#define V0_CODE_PERMS  (V0_MEM_PRESENT | V0_MEM_READ | V0_MEM_EXEC)
+#define V0_DATA_PERMS  (V0_MEM_READ | V0_MEM_WRITE | V0_MEM_MAP)
+#define V0_KERN_PERMS  (V0_MEM_PRESENT | V0_MEM_EXEC | V0_MEM_SYS       \
+                        | V0_MEM_GLOBAL)
+#define V0_STACK_PERMS (V0_MEM_PRESENT | V0_MEM_READ | V0_MEM_WRITE     \
+                        | V0_MEM_STACK)
 
 struct v0 *
 v0init(struct v0 *vm)
@@ -148,7 +148,7 @@ v0init(struct v0 *vm)
         v0initseg(vm, V0_PAGE_SIZE, vmnpg / 8 - 1, V0_CODE_PERMS);
         v0initseg(vm, vmnpg * PAGESIZE / 4, vmnpg / 2, V0_DATA_PERMS);
         v0initseg(vm, vmnpg * PAGESIZE * 3 / 4, vmnpg / 4 - 8, V0_KERN_PERMS);
-        v0initseg(vm, vmnpg * (PAGESIZE - 8), 8, V0_STK_PERMS);
+        v0initseg(vm, vmnpg * (PAGESIZE - 8), 8, V0_STACK_PERMS);
         v0initio(vm);
         vm->regs[V0_FP_REG] = 0x00000000;
         vm->regs[V0_SP_REG] = V0_MEM_SIZE - 1;
@@ -359,6 +359,10 @@ v0loop(struct v0 *vm, v0ureg pc)
                 opjmp(vm, pc);
             v0opcli:
                 pc = v0cli(vm, pc);
+
+                opjmp(vm, pc);
+            v0opslp:
+                pc = v0slp(vm, pc);
 
                 opjmp(vm, pc);
             v0oprst:

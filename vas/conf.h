@@ -3,6 +3,7 @@
 #ifndef __VAS_CONF_H__
 #define __VAS_CONF_H__
 
+#define VASDEBUG         0
 #define VASBUF           1
 #define VASMMAP          1
 #define V0               1
@@ -13,7 +14,7 @@
 #define PAGESIZE         4096
 #define VAS_READ_BUFS    32
 
-#if defined(V0)
+#if defined(V0) && 0
 #include <v0/mach.h>
 #include <v0/vm.h>
 #define VAS32BIT    1
@@ -22,8 +23,8 @@
 #define VASREGINDIR 0x80000000U
 typedef struct v0op   vasop_t;
 typedef union v0oparg vasarg_t;
-#define vasadrtoptr(adr) (&v0vm->mem[adr])
 #endif
+#define vasadrtoptr(adr) (&v0vm->mem[adr])
 
 #if 0
 /* assembler features */

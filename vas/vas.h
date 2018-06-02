@@ -134,7 +134,7 @@ struct vasline {
 struct vasline  * vasfindline(vasuword adr);
 #endif
 
-void              v0disasm(struct v0 *vm, struct v0op *op, v0reg pc);
+//void              v0disasm(struct v0 *vm, struct v0op *op, v0ureg pc);
 uint32_t          tmhash32(unsigned long u);
 extern void       vasinit(void);
 #if (VASALIGN)

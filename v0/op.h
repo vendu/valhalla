@@ -41,7 +41,8 @@ typedef v0reg       v0opfunc(struct v0 *vm, uint8_t *ptr, v0ureg pc);
 #define v0addspeedcnt(n)
 #endif
 
-extern char *v0opnametab[V0_NINST_MAX];
+extern char     *v0opnametab[V0_NINST_MAX];
+extern vasuword  _startadr;
 
 #define v0doxcpt(xcpt)                                                  \
     v0procxcpt(xcpt, __FILE__, __FUNCTION__, __LINE__)
@@ -162,8 +163,8 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
         v0setopbits(V0_IRD, V0_RI_ARG, V0_R_ARG, tab);                  \
         v0setopbits(V0_IWR, V0_RI_ARG, V0_R_ARG, tab);                  \
         v0setopbits(V0_ICF, V0_RI_ARG, V0_R_ARG, tab);                  \
-        v0setopbits(V0_CLI, V0_RI_ARG, 0, tab);                         \
-        v0setopbits(V0_STI, V0_RI_ARG, 0, tab);                         \
+        v0setopbits(V0_CLI, V0_M_ARG, 0, tab);                          \
+        v0setopbits(V0_STI, V0_M_ARG, 0, tab);                          \
     } while (0)
 
 #define v0initops(tab)                                                  \
@@ -216,6 +217,7 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
         v0setop(V0_ICF, icf, 2, tab);                                   \
         v0setop(V0_CLI, cli, 1, tab);                                   \
         v0setop(V0_STI, sti, 1, tab);                                   \
+        v0setop(V0_SLP, slp, 0, tab);                                   \
         v0setop(V0_RST, rst, 0, tab);                                   \
         v0setop(V0_HLT, hlt, 0, tab);                                   \
     } while (0)
@@ -269,6 +271,7 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
         v0addop(V0_ICF, icf, 2);                                        \
         v0addop(V0_CLI, cli, 1);                                        \
         v0addop(V0_STI, sti, 1);                                        \
+        v0addop(V0_SLP, slp, 0);                                        \
         v0addop(V0_RST, rst, 0);                                        \
         v0addop(V0_HLT, hlt, 0);                                        \
     } while (0)
@@ -929,7 +932,6 @@ v0psm(struct v0 *vm, v0ureg pc)
     v0reg        cnt = 4 << op->parm;
     v0reg       *sptr = v0regtoptr(vm, lo);
     v0reg       *dptr = v0adrtoptr(vm, sp);
-    v0reg        ndx = lo;
     v0reg        num;
 
     pc += sizeof(struct v0op);
@@ -1529,34 +1531,69 @@ v0icf(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
-v0sti(struct v0 *vm, v0ureg pc)
-{
-    struct v0op *op = v0adrtoptr(vm, pc);
-
-    return pc;
-}
-
+// disable _all_ interrupts
 static _V0OPFUNC_T
 v0cli(struct v0 *vm, v0ureg pc)
 {
     struct v0op *op = v0adrtoptr(vm, pc);
+    v0reg        imr = vm->regs[V0_IMR_REG];
+    v0reg       *dptr = v0getadr1(vm, op);
+
+    pc += sizeof(struct v0op);
+    if (op->adr == V0_DIR_ADR || op->adr == V0_NDX_ADR) {
+        *dptr = imr;
+    }
+    vm->regs[V0_IMR_REG] = 0;
+    vm->regs[V0_PC_REG] = pc;
+
+    return pc;
+}
+
+// add bits to IMR in order to enable interrupts
+// optional memory-argument is mask to be restored
+static _V0OPFUNC_T
+v0sti(struct v0 *vm, v0ureg pc)
+{
+    struct v0op *op = v0adrtoptr(vm, pc);
+    v0ureg       imr = vm->regs[V0_IMR_REG];
+    v0ureg       mask = vm->regs[op->reg1];
+    v0reg       *sptr = v0getadr1(vm, op);
+
+    pc += sizeof(struct v0op);
+    if (op->adr == V0_DIR_ADR || op->adr == V0_NDX_ADR) {
+        imr = *sptr;
+    } else {
+        imr |= mask;
+    }
+    vm->regs[V0_PC_REG] = pc;
+    vm->regs[V0_IMR_REG] = imr;
 
     return pc;
 }
 
 static _V0OPFUNC_T
-v0hlt(struct v0 *vm, v0ureg pc)
+v0slp(struct v0 *vm, v0ureg pc)
 {
-    exit(0);
+    struct v0op *op = v0adrtoptr(vm, pc);
+
+    pc += sizeof(struct v0op);
+    vm->regs[V0_PC_REG] = pc;
+
+    return pc;
 }
 
 static _V0OPFUNC_T
 v0rst(struct v0 *vm, v0ureg pc)
 {
-    v0init(vm);
 
-    return V0_TEXT_ADR;
+    return _startadr;
+}
+
+static _V0OPFUNC_T
+v0hlt(struct v0 *vm, v0ureg pc)
+{
+
+    return 0xffffffffU;
 }
 
 #endif /* __V0_OP_H__ */

@@ -222,7 +222,7 @@ vasinitops(void)
 }
 
 void
-v0disasm(struct v0 *vm, struct v0op *op, v0reg pc)
+v0disasm(struct v0 *vm, struct v0op *op, v0ureg pc)
 {
     fprintf(stderr, "%p:%p\t%s @ 0x%x\t", vm, op, v0opnametab[op->code], pc);
     fprintf(stderr, "r1 = %x, r2 = %x, a = %x, p = %x, v = %x\n",

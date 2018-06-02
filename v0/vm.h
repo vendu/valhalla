@@ -94,7 +94,7 @@ struct v0iofuncs {
 #define V0_CODE_SEG      0x01 // code, read-only data such as literals
 #define V0_DATA_SEG      0x02 // read-write (initialised) data
 #define V0_KERN_SEG      0x03 // code to implement system [call] interface
-#define V0_STK_SEG       0x04
+#define V0_STACK_SEG     0x04
 #define V0_SEGS          8
 /* option-bits for flg-member */
 #define V0_TRACE         0x01
@@ -118,7 +118,7 @@ struct v0seg {
 };
 
 struct v0 {
-    v0wreg            regs[V0_INT_REGS + V0_SYS_REGS];
+    v0reg             regs[V0_INT_REGS + V0_SYS_REGS];
     struct v0seg      segs[V0_SEGS];
     long              flg;
     v0memflg         *membits;
@@ -212,7 +212,7 @@ struct v0op {
 #define V0_MEM_MAP       0x10   // memory may be mapped across multiple users
 #define V0_MEM_SYS       0x20   // system code for user programs
 #define V0_MEM_GLOBAL    0x40   // process-global segment
-#define V0_MEM_STK       0x80   // segment grows downward in core
+#define V0_MEM_STACK     0x80   // segment grows downward in core
 
 #define V0_VTD_PATH      "vtd.txt"
 /* predefined I/O ports */
@@ -233,18 +233,22 @@ struct v0op {
 #define V0_NTRAP         256
 
 /* USER [programmable] traps */
-#define v0trapisuser(t)  (((t) & V0_SYSTEM_TRAP) == 0)
+#define v0trapisuser(t)  (((t) & V0_SYS_TRAP_BIT) == 0)
+#define v0trapissys(t)   ((t) & V0_SYS_TRAP_BIT)
 #define V0_BREAK_POINT   0x00 // debugging breakpoint; highest priority
 #define V0_TMR_INTR      0x01 // timer interrupt
 #define V0_KBD_INTR      0x02 // keyboard
 #define V0_PTR_INTR      0x03 // mouse, trackpad, joystick, ...
 #define V0_PAGE_FAULT    0x04 // reserved for later use (paging); adr | bits
-#define V0_SYS_TRAP_BIT  0x10 // denotes system interrupts
+#define V0_FAST_INTR     0x1f // fast interrupts
+#define V0_SYS_TRAP_BIT  0x20 // denotes system interrupts
 #define V0_SYS_TRAP_MAX  0x3f // maximum system interrupt number
+#define V0_TRAPS         64
+#define V0_USR_TRAP_MASK 0x1f
 
 /* SYSTEM TRAPS */
 /* aborts */
-#define V0_ABORT_TRAP    0x10 // traps that terminate the process
+#define V0_ABORT_TRAP    0x20 // traps that terminate the process
 /* memory-related violations */
 #define V0_STACK_FAULT   0x10 // stack segment limits exceeded; adr
 #define V0_TEXT_FAULT    0x10 // invalid address for instruction; adr

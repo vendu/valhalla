@@ -15,7 +15,7 @@
  * ---------------------
  * r    register                vm->regs[op->reg]
  * i	immediate               op->val
- * d    immediate               op->arg[0].i32 etc.
+ * d    direct                  op->arg[0].i32 etc.
  * m    memory [address]	v0getarg1(vm, op), v0getarg2(vm, op)
  *
  * Instruction Prefixes
@@ -323,13 +323,14 @@
 #define V0_NOP 0xff // no-operation
 #define V0_HLT 0xfe // halt (shutdown)
 #define V0_RST 0xfd // reset
-#define V0_CLI 0xfc // clear interrupts enabled flag (disable interrupts)
-#define V0_STI 0xfb // set interrupts enabled flag (enable interrupts)
+#define V0_SLP 0xfc // wait for interrupt
+#define V0_CLI 0xfb // clear interrupts enabled flag (disable interrupts)
+#define V0_STI 0xfa // set interrupts enabled flag (enable interrupts)
 // IMR, IVR, PDR, SEG
 // - interrupt mask & vector, page directory,
 //   memory segment table
-#define V0_LDS 0xfa // load system register into a general-purpose register
-#define V0_STS 0xf9 // store general-purpose register into system register
+#define V0_LDS 0xf9 // load system register into a general-purpose register
+#define V0_STS 0xf8 // store general-purpose register into system register
 
 #endif /* __VPU_V0_MACH_H__ */
 
