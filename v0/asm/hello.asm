@@ -14,7 +14,7 @@ loop:
 	inc	    %r0         	; increment address
 	iwrb	%r2, %r1    	; write character to stdout
 	ldrb	*%r0, %r1		; read new character
-	cmp		$0x00, %r1      ; check if character non-zero
+	cmp		$NUL, %r1       ; check if character non-zero
 	bnz		loop            ; no
 done:
 	hlt

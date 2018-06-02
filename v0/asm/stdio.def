@@ -1,5 +1,7 @@
 ; stdio.def - valhalla aseembly definitions
 
+.define NUL             0 ; zero string-terminator
+
 .define STDIN           0 ; standard input (keyboard)
 .define STDOUT          1 ; standard output (console)
 .define STDERR          2 ; standard error messages (console)
