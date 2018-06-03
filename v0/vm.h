@@ -8,7 +8,6 @@
 #include <stdint.h>
 #include <endian.h>
 #include <valhalla/cdefs.h>
-//#include <zero/fastudiv.h>
 
 struct v0;
 
@@ -39,15 +38,16 @@ struct v0iofuncs {
 #define V0_RET_REG       V0_R0_REG
 #define V0_AC_REG        V0_R6_REG
 #define V0_VC_REG        V0_R7_REG
-/* accumulator (general-purpose register) IDs */
-#define V0_R0_REG        0x00
-#define V0_R1_REG        0x01
-#define V0_R2_REG        0x02
-#define V0_R3_REG        0x03
-#define V0_R4_REG        0x04
-#define V0_R5_REG        0x05
-#define V0_R6_REG        0x06 // subroutine argument count
-#define V0_R7_REG        0x07 // subroutine local variable count
+/* CALLER-SAVE REGISTERS */
+#define V0_R0_REG        0x00 // function return value, first function argument
+#define V0_R1_REG        0x01 // second function argument
+#define V0_R2_REG        0x02 // third function argument
+#define V0_R3_REG        0x03 // fourth function argument
+#define V0_R4_REG        0x04 // fifth function argument
+#define V0_R5_REG        0x05 // sixth function argument
+#define V0_R6_REG        0x06 // stack-argument count
+#define V0_R7_REG        0x07 // stack-variable count
+/* CALLEE-SAVE REGISTERS */
 #define V0_R8_REG        0x08
 #define V0_R9_REG        0x09
 #define V0_R10_REG       0x0a
@@ -58,15 +58,19 @@ struct v0iofuncs {
 #define V0_R15_REG       0x0f
 #define V0_INT_REGS      16 // # of integer/scalar registers
 #define V0_SAVE_REGS     8  // caller saves r0..r7, callee r8..r15
+/* SYSTEM REGISTERS */
 #define V0_PC_REG        (V0_INT_REGS + 0) // program counter
 #define V0_FP_REG        (V0_INT_REGS + 1) // frame pointer
 #define V0_SP_REG        (V0_INT_REGS + 2) // stack pointer
 #define V0_MSW_REG       (V0_INT_REGS + 3) // machine status word
-#define V0_MFW_REG       (V0_INT_REGS + 4) // machine feature word
-#define V0_IMR_REG       (V0_INT_REGS + 5) // interrupt-mask (1-bit for enabled)
-#define V0_IVR_REG       (V0_INT_REGS + 6) // interrupt vector address
-#define V0_PDR_REG       (V0_INT_REGS + 7) // page directory address
-/* V0_SEG_REG stores # of segments (max 256) in high-order 8-bit byte */
+#define V0_IMR_REG       (V0_INT_REGS + 4) // interrupt-mask (1-bit for enabled)
+#define V0_IVR_REG       (V0_INT_REGS + 5) // interrupt vector address
+#define V0_PDR_REG       (V0_INT_REGS + 6) // page directory address
+/* READ-ONLY REGISTERS */
+#define V0_MFW_REG       (V0_INT_REGS + 8) // machine feature word
+#define V0_SYS_REGS      16
+/* V0_SEG_REG stores # of segments (max 256) in low-order 8-bit byte */
+/* - segment-table must be aligned to 256-byte boundary */
 #define V0_SEG_REG       (V0_INT_REGS + 8) // segment table address
 #define V0_SYS_REGS      16
 /* system register IDs */
@@ -91,10 +95,11 @@ struct v0iofuncs {
 #define V0_MSW_SF_BIT    (1 << 31) // signed resuit; arg1 > arg2
 /* program segments */
 #define V0_TRAP_SEG      0x00
-#define V0_CODE_SEG      0x01 // code, read-only data such as literals
-#define V0_DATA_SEG      0x02 // read-write (initialised) data
-#define V0_KERN_SEG      0x03 // code to implement system [call] interface
-#define V0_STACK_SEG     0x04
+#define V0_CODE_SEG      0x01 // code
+#define V0_RODATA_SEG    0x02 // read-only data such as literals
+#define V0_DATA_SEG      0x03 // read-write (initialised) data
+#define V0_KERN_SEG      0x04 // code to implement system [call] interface
+#define V0_STACK_SEG     0x05
 #define V0_SEGS          8
 /* option-bits for flg-member */
 #define V0_TRACE         0x01
