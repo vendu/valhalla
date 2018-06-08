@@ -1,5 +1,5 @@
-#ifndef __VPU_V0_MACH_H__
-#define __VPU_V0_MACH_H__
+#ifndef __VALHALLA_V0_MACH_H__
+#define __VALHALLA_V0_MACH_H__
 
 #include <stdint.h>
 
@@ -37,7 +37,7 @@
 #define V0_MFR_DSP (1U << 3) // digital signal processor present
 #define V0_MFR_FPM (1U << 4) // fixed-point processor present
 
-#define V0_NOP     0xff // no-operation
+#define V0_NOP     0xffff    // no-operation, 16-bit all-1 header (32-bit size)
 
 /*
  * ARITHMETIC-LOGICAL OPERATIONS
@@ -264,46 +264,5 @@
 #define V0_FIN 0x3e
 #define V0_RET 0x3f
 
-/* Memory Management & Synchronisation
- * -----------------------------------
- *
- * Instructions
- * ------------
- *
- * Mnemo   Opcode  Src  Dest        Brief                           Arguments
- * -----   ------  ---  ----        -----                           ---------
- * BRD     0x60                     memory read-barrier             none
- * BWR     0x61                     memory write-barrier            none
- * BAR     0x62                     full memory barrier             none
- * CPF     0x63    m                cache prefetch                  word-address
- * CWB     0x64    m                cache write-back                word-address
- * CLD     0x65    m    r           cache load linked               word-address
- * CST     0x66    r    m           cache store conditional (if cacheline clean)
- * FPG     0x67    m                flush memory TLB-entry          word-address
- * FLS     0x68    m    ri          flush cachelines                count
- * CAS     0x69    r, d, m          compare and swap                val/want/adr
- * CS2     0x6a    r, d, m          dual-word compare and swap      val/want/adr
- * BTC     0x6b    m     i          bit test-and-clear              adr, ndx
- * BTS     0x6c    m     i          bit test-and-set                adr, ndx
- * Opcode Notes
- * ------------
- * BAR, BRD, BWR        - bits 0-1: 0 - read, 1 - write, 2 - both
- * CLK/CUL/CLL/CST      - 0x04 - locked operation
- *                        - 0x00 unlock, 0x01 lock, 0x02 load, 0x03 store
- */
-#define V0_BAR 0x00 // full memory barrier/synchronisation
-#define V0_BRD 0x01 // memory read-barrier
-#define V0_BWR 0x02 // memory write-barrier
-#define V0_CPF 0x03 // cacheline memory-prefetch
-#define V0_CWB 0x04 // cacheline memory-flush (write-back)
-#define V0_CLD 0x05 // cacheline load-linked (clear dirty-bit)
-#define V0_CST 0x06 // cacheline store-conditional (check dirty-bit)
-#define V0_FPG 0x07 // flush page-entry
-#define V0_FLS 0x08 // flush cachelines
-#define V0_CAS 0x09 // compare-and-swap
-#define V0_CS2 0x0a // dual-word/pointer compare-and-swap
-#define V0_BTC 0x0b // bit test-and-clear; returns original in VF
-#define V0_BTS 0x0c // bit test-and-set; returns original in VF
-
-#endif /* __VPU_V0_MACH_H__ */
+#endif /* __VALHALLA_V0_MACH_H__ */
 
