@@ -5,7 +5,7 @@
 #include <errno.h>
 //#include <zero/fastudiv.h>
 #include <v0/types.h>
-#include <v0/mach.h>
+#include <v0/isa.h>
 #include <v0/vm.h>
 #include <v0/io.h>
 #include <v0/op.h>

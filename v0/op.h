@@ -13,7 +13,7 @@
 //#include <zero/cdefs.h>
 //#include <zero/trix.h>
 //#include <zero/fastudiv.h>
-#include <v0/mach.h>
+#include <v0/isa.h>
 #include <v0/vm.h>
 #include <vas/vas.h>
 

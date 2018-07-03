@@ -1,5 +1,5 @@
-#ifndef __VALHALLA_V0_MACH_H__
-#define __VALHALLA_V0_MACH_H__
+#ifndef __VALHALLA_V0_ISA_H__
+#define __VALHALLA_V0_ISA_H__
 
 #include <stdint.h>
 
@@ -24,12 +24,9 @@
  * 0xff    - memory bus lock
  * The MLK-prefix may be used to lock the memory bus for a single operation of
  * - INC, DEC, ADD, SDC, SUB, SBC, NOT, AND, XOR, OR, BTR, BTS, BTC, LDR, STR
- *
  */
 
 /* bits for MFR feature register */
-
-/* TODO: integrate FPU-operations into the basic instruction set */
 
 #define V0_MFR_MMU (1U << 0) // memory management unit present
 #define V0_MFR_FPU (1U << 1) // floating-point processor present
@@ -37,8 +34,7 @@
 #define V0_MFR_DSP (1U << 3) // digital signal processor present
 #define V0_MFR_FPM (1U << 4) // fixed-point processor present
 
-#define V0_NOP     0xffff    // no-operation, 16-bit all-1 header (32-bit size)
-
+#define V0_NOP     0xff
 /*
  * ARITHMETIC-LOGICAL OPERATIONS
  * -----------------------------
@@ -60,8 +56,6 @@
  * XOR   0x0a    rid    r       logical exclusive OR
  * IOR   0x0b    rid    r       logical inclusive OR
  *
- * Macros
- * ------
  */
 #define V0_INC 0x01 //   r     increment by one
 #define V0_DEC 0x02 //   r     decrement by one
@@ -110,7 +104,7 @@
  * ------------
  * MUL/MUH		- 0x2 denotes high word return
  */
-#define V0_CRP   0x10 //  ri, r   Multiplication
+#define V0_CRP   0x10 //  ri, r   Compute reciprocal
 #define V0_MUL   0x11 //  ri, r   Multiplication, get low word of results
 #define V0_MUH   0x12 //  ri, r   Multiplication, get high word of results
 
@@ -264,5 +258,5 @@
 #define V0_FIN 0x3e
 #define V0_RET 0x3f
 
-#endif /* __VALHALLA_V0_MACH_H__ */
+#endif /* __VALHALLA_V0_ISA_H__ */
 
