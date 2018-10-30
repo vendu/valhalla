@@ -13,9 +13,10 @@
 //#include <zero/cdefs.h>
 //#include <zero/trix.h>
 //#include <zero/fastudiv.h>
+#include <valhalla/param.h>
+#include <vas/vas.h>
 #include <v0/vm/isa.h>
 #include <v0/vm/vm.h>
-#include <vas/vas.h>
 
 #define V0_HALTED                   0xffffffffU // special PC-value
 #define V0_OP_INVAL                 NULL

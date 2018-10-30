@@ -3,7 +3,7 @@
 
 /* VIRTUAL MACHINE */
 
-#include <v0/vm/
+#include <v0/vm/conf.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <endian.h>

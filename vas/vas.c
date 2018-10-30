@@ -16,12 +16,13 @@
 //#include <zero/cdefs.h>
 //#include <zero/param.h>
 //#include <zero/trix.h>
+#include <valhalla/param.h>
 #include <vas/vas.h>
 #include <vas/opt.h>
 #include <vas/io.h>
 #if (V0)
-#include <v0/conf.h>
-#include <v0/vm.h>
+#include <v0/vm/conf.h>
+#include <v0/vm/vm.h>
 #endif
 
 extern struct v0       *v0vm;

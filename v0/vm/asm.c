@@ -8,10 +8,10 @@
 #include <stdint.h>
 //#include <zero/trix.h>
 #include <vas/vas.h>
-#include <v0/conf.h>
-#include <v0/isa.h>
-#include <v0/vm.h>
-#include <v0/op.h>
+#include <v0/vm/conf.h>
+#include <v0/vm/isa.h>
+#include <v0/vm/vm.h>
+#include <v0/vm/op.h>
 
 extern struct v0 *v0vm;
 struct vasop     *v0optab[V0_HASH_SIZE];
@@ -175,11 +175,6 @@ vasgetreg(char *str, vasword *retsft, char **retptr)
     } else if (*str == 'l') {
         str++;
         sft = 2;
-#if (!V032BIT)
-    } else if (*str == 'q') {
-        str++;
-        sft = 3;
-#endif
     }
     if ((sft) && (*str) && isdigit(*str)) {
         reg = 0;
