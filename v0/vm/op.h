@@ -13,10 +13,9 @@
 //#include <zero/cdefs.h>
 //#include <zero/trix.h>
 //#include <zero/fastudiv.h>
-#include <valhalla/param.h>
-#include <vas/vas.h>
 #include <v0/vm/isa.h>
 #include <v0/vm/vm.h>
+#include <vas/vas.h>
 
 #define V0_HALTED                   0xffffffffU // special PC-value
 #define V0_OP_INVAL                 NULL
@@ -35,12 +34,6 @@
 #define _v0opadr(x) v0##x
 typedef v0reg       v0opfunc(struct v0 *vm, uint8_t *ptr, v0ureg pc);
 #define _V0OPTAB_T  v0opfunc *
-#endif
-
-#if defined(V0_GAME)
-#define v0addspeedcnt(n)            (v0speedcnt += (n))
-#else
-#define v0addspeedcnt(n)
 #endif
 
 extern char     *v0opnametab[V0_NINST_MAX];
@@ -342,7 +335,6 @@ static _V0OPFUNC_T
 v0nop(struct v0 *vm, v0ureg pc)
 {
     pc += sizeof(struct v0op);
-    v0addspeedcnt(1);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -361,7 +353,6 @@ v0inc(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     src++;
-    v0addspeedcnt(2);
     vm->regs[V0_PC_REG] = pc;
     *sptr = src;
 
@@ -381,7 +372,6 @@ v0dec(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     src--;
-    v0addspeedcnt(2);
     vm->regs[V0_PC_REG] = pc;
     *sptr = src;
 
@@ -402,7 +392,6 @@ v0cmp(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     dest -= src;
-    v0addspeedcnt(8);
     v0clrmsw(vm);
     if (!dest) {
         v0setzf(vm);
@@ -430,7 +419,6 @@ v0add(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     res += dest;
-    v0addspeedcnt(4);
     if (res < dest) {
         v0setof(vm);
     }
@@ -456,7 +444,6 @@ v0adc(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     res += dest;
-    v0addspeedcnt(4);
     if (res < dest) {
         v0setof(vm);
     }
@@ -480,7 +467,6 @@ v0sub(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     dest -= src;
-    v0addspeedcnt(4);
     vm->regs[V0_PC_REG] = pc;
     *dptr = dest;
 
@@ -501,7 +487,6 @@ v0sbc(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     dest -= src;
-    v0addspeedcnt(4);
     vm->regs[V0_PC_REG] = pc;
     *dptr = dest;
 
@@ -522,7 +507,6 @@ v0shl(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     dest <<= src;
-    v0addspeedcnt(4);
     vm->regs[V0_PC_REG] = pc;
     *dptr = dest;
 
@@ -544,7 +528,6 @@ v0shr(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     dest >>= src;
-    v0addspeedcnt(4);
     dest &= fill;
     vm->regs[V0_PC_REG] = pc;
     *dptr = dest;
@@ -577,7 +560,6 @@ v0sar(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
-    v0addspeedcnt(4);
     dest &= fill;
     vm->regs[V0_PC_REG] = pc;
     *dptr = dest;
@@ -598,7 +580,6 @@ v0not(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     src = ~src;
-    v0addspeedcnt(1);
     vm->regs[V0_PC_REG] = pc;
     *sptr = src;
 
@@ -619,7 +600,6 @@ v0and(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     dest &= src;
-    v0addspeedcnt(2);
     vm->regs[V0_PC_REG] = pc;
     *dptr = dest;
 
@@ -640,7 +620,6 @@ v0xor(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     dest ^= src;
-    v0addspeedcnt(2);
     vm->regs[V0_PC_REG] = pc;
     *dptr = dest;
 
@@ -661,7 +640,6 @@ v0ior(struct v0 *vm, v0ureg pc)
         pc += sizeof(struct v0op) + sizeof(union v0oparg);
     }
     dest |= src;
-    v0addspeedcnt(2);
     vm->regs[V0_PC_REG] = pc;
     *dptr = dest;
 
@@ -670,6 +648,15 @@ v0ior(struct v0 *vm, v0ureg pc)
 
 /* CRP */
 
+static _V0OPFUNC_T
+v0crp(struct v0 *vm, v0ureg pc)
+{
+    struct v0op *op = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, op);
+    v0wreg       res;
+}
+
+#if 0
 static _V0OPFUNC_T
 v0crp(struct v0 *vm, v0ureg pc)
 {
@@ -687,6 +674,7 @@ v0crp(struct v0 *vm, v0ureg pc)
 
     return pc;
 }
+#endif
 
 static _V0OPFUNC_T
 v0mul(struct v0 *vm, v0ureg pc)
@@ -706,7 +694,6 @@ v0mul(struct v0 *vm, v0ureg pc)
     dest = (v0wreg)res;
     vm->regs[V0_PC_REG] = pc;
     dest &= 0xffffffff;
-    v0addspeedcnt(16);
     *dptr = (v0reg)dest;
 
     return pc;
@@ -730,7 +717,6 @@ v0muh(struct v0 *vm, v0ureg pc)
     dest = (v0wreg)res;
     vm->regs[V0_PC_REG] = pc;
     dest >>= 32;
-    v0addspeedcnt(16);
     *dptr = (v0reg)dest;
 
     return pc;
@@ -758,11 +744,9 @@ v0ldr(struct v0 *vm, v0ureg pc)
         sptr = v0regtoptr(vm, reg);
         mask--;
         src = *sptr;
-        v0addspeedcnt(4);
         src &= mask;
         *dptr |= src;
     } else {
-        v0addspeedcnt(16);
         if (v0opissigned(op)) {
             switch (parm) {
                 case 0:
@@ -839,12 +823,10 @@ v0str(struct v0 *vm, v0ureg pc)
         mask = 1 << (parm + CHAR_BIT);
         src = *sptr;
         mask--;
-        v0addspeedcnt(4);
         dptr = v0regtoptr(vm, reg);
         src &= mask;
         *dptr |= src;
     } else {
-        v0addspeedcnt(16);
         if (v0opissigned(op)) {
             switch (op->parm) {
                 case 0:
@@ -911,10 +893,7 @@ v0psh(struct v0 *vm, v0ureg pc)
     sp -= sizeof(v0reg);
     pc += sizeof(struct v0op);
     dptr = v0adrtoptr(vm, sp);
-    if (op->adr == V0_REG_ADR) {
-        v0addspeedcnt(4);
-    } else {
-        v0addspeedcnt(8);
+    if (op->adr != V0_REG_ADR) {
         pc += sizeof(union v0oparg);
     }
     *dptr = *sptr;
@@ -940,7 +919,6 @@ v0psm(struct v0 *vm, v0ureg pc)
     v0reg        num;
 
     pc += sizeof(struct v0op);
-    v0addspeedcnt(8 * cnt);
     dptr -= cnt;
     while (cnt) {
         num = min(8, cnt);
@@ -987,7 +965,6 @@ v0pop(struct v0 *vm, v0ureg pc)
     pc += sizeof(struct v0op);
     sp += sizeof(v0reg);
     *dest = *sptr;
-    v0addspeedcnt(4);
     vm->regs[V0_SP_REG] = sp;
     vm->regs[V0_PC_REG] = pc;
 
@@ -1007,7 +984,6 @@ v0pom(struct v0 *vm, v0ureg pc)
     v0reg        num;
 
     pc += sizeof(struct v0op);
-    v0addspeedcnt(8 * cnt);
     sptr -= cnt;
     sp -= cnt;
     while (cnt) {
@@ -1049,7 +1025,6 @@ v0jmp(struct v0 *vm, v0ureg pc)
     struct v0op *op = v0adrtoptr(vm, pc);
 
     pc = v0getjmpadr(vm, op);
-    v0addspeedcnt(8);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1062,7 +1037,6 @@ v0jmr(struct v0 *vm, v0ureg pc)
     v0reg        ofs = v0getjmradr(vm, op);
 
     pc += ofs;
-    v0addspeedcnt(8);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1079,7 +1053,6 @@ v0biz(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1096,7 +1069,6 @@ v0bnz(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1113,7 +1085,6 @@ v0blt(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1130,7 +1101,6 @@ v0ble(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1147,7 +1117,6 @@ v0bgt(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1164,7 +1133,6 @@ v0bge(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1181,7 +1149,6 @@ v0bio(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1198,7 +1165,6 @@ v0bno(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1215,7 +1181,6 @@ v0bic(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1232,7 +1197,6 @@ v0bnc(struct v0 *vm, v0ureg pc)
     } else {
         pc += sizeof(struct v0op);
     }
-    v0addspeedcnt(16);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1269,11 +1233,6 @@ v0csr(struct v0 *vm, v0ureg pc)
     pc += sizeof(struct v0op);
     sp -= sizeof(v0reg);
     sptr = v0adrtoptr(vm, sp);
-    if (op->adr == V0_REG_ADR) {
-        v0addspeedcnt(4);
-    } else {
-        v0addspeedcnt(8);
-    }
     *sptr = pc;
     vm->regs[V0_PC_REG] = dest;
     vm->regs[V0_SP_REG] = sp;
@@ -1311,7 +1270,6 @@ v0beg(struct v0 *vm, v0ureg pc)
 
     /* set stack frame up */
     sp -= sizeof(v0reg);
-    v0addspeedcnt(32);
     sptr = v0adrtoptr(vm, sp);
     vm->regs[V0_FP_REG] = sp;
     *sptr = fp;
@@ -1357,7 +1315,6 @@ v0fin(struct v0 *vm, v0ureg pc)
 
     pc += sizeof(struct v0op);
     sptr -= V0_SAVE_REGS + 1;
-    v0addspeedcnt(8);
     rptr[V0_R15_REG] = sptr[0];
     rptr[V0_R14_REG] = sptr[1];
     sp += sizeof(v0reg);
@@ -1397,7 +1354,6 @@ v0ret(struct v0 *vm, v0ureg pc)
     v0ureg  sp = vm->regs[V0_SP_REG];
     v0reg  *sptr = v0adrtoptr(vm, sp);
 
-    v0addspeedcnt(16);
     sp -= sizeof(v0reg);
     pc = *sptr;
     vm->regs[V0_SP_REG] = sp;

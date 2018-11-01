@@ -42,20 +42,23 @@
  * Instructions
  * ------------
  *
- * Mnemo Opcode  Src    Dest	Brief
- * ----- ------  ---    ----    -----
- * INC	 0x01           r       increment by one
- * DEC   0x02           r       decrement by one
- * CMP   0x03    rid    r	compare (subtract + set MSW-flags)
- * ADD   0x04    rid	r	addition (ignore over and underflows)
- * ADC   0x05    rid    r       addition with carry-flag
- * SUB   0x06    rid	r	subtract; ignore underflow
- * SBC   0x07    rid    r       subtract with carry-flag
- * NOT   0x08           r       bitwise inverse
- * AND   0x09    rid    r       logical AND
- * XOR   0x0a    rid    r       logical exclusive OR
- * IOR   0x0b    rid    r       logical inclusive OR
- *
+ * Mnemo Opcode  Src  Dest    Brief
+ * ----- ------  ---  ----    -----
+ * INC	 0x01         r       increment by one
+ * DEC   0x02         r       decrement by one
+ * CMP   0x03    rid  r	      compare (subtract + set MSW-flags)
+ * ADD   0x04    rid  r	      addition (ignore over and underflows)
+ * ADC   0x05    rid  r       addition with carry-flag
+ * SUB   0x06    rid  r	      subtract; ignore underflow
+ * SBC   0x07    rid  r       subtract with carry-flag
+ * NOT   0x08         r       bitwise inverse
+ * AND   0x09    rid  r       logical AND
+ * XOR   0x0a    rid  r       logical exclusive OR
+ * IOR   0x0b    rid  r       logical inclusive OR
+ * SHL   0x0c    ri     r       shift left [logical/fill with zero]
+ * SHR   0x0d    ri     r       shift right logical (fill with zero)
+ * SAR   0x0e    ri     r       shift right arithmetic (fill with sign-bit)
+ * CLZ	 0x0f    rid  r	      Hamming weight/bit population (count of 1-bits)
  */
 #define V0_INC 0x01 //   r      increment by one
 #define V0_DEC 0x02 //   r      decrement by one
@@ -68,17 +71,17 @@
 #define V0_AND 0x09 //   ri, r  logical AND
 #define V0_XOR 0x0a //   ri, r  logical exclusive OR
 #define V0_IOR 0x0b //   ri, r  logical inclusive OR
+#define V0_SHL 0x10
+#define V0_SHR 0x11
+#define V0_SAR 0x12
+#define V0_CLZ 0x0c
 
 /*
- * SHIFT UNIT
- * ----------
- * SHL   0x0c    ri     r       shift left [logical/fill with zero]
- * SHR   0x0d    ri     r       shift right logical (fill with zero)
- * SAR   0x0e    ri     r       shift right arithmetic (fill with sign-bit)
+ * HAM   0x10    rid  r       count leading zero bits
+ * SWP   0x11    rid  r       byteswap
  */
-#define V0_SHL 0x0c
-#define V0_SHR 0x0d
-#define V0_SAR 0x0e
+#define V0_HAM 0x10
+#define V0_SWP 0x11
 
 /*
  * MULTIPLICATION AND DIVISION
@@ -96,71 +99,40 @@
  *
  * Mnemo Opcode  Src    Dest	Brief
  * ----- ------  ---    ----    -----
- * CRP   0x10    rid    r       calculate reciprocal
- * MUL   0x11    rid    r       multiply and return low word
- * MUH   0x12    rid    r       multiply and return high word
+ * CRP   0x12    rid    r       calculate reciprocal
+ * MUL   0x13    rid    r       multiply and return low word
+ * MUH   0x14    rid    r       multiply and return high word
  *
  * Opcode Notes
  * ------------
  * MUL/MUH		- 0x2 denotes high word return
  */
-#define V0_CRP   0x10 //  ri, r   Compute reciprocal
-#define V0_MUL   0x11 //  ri, r   Multiplication, get low word of results
-#define V0_MUH   0x12 //  ri, r   Multiplication, get high word of results
-
-/*
- * AUXILIARY OPERATIONS
- * --------------------
- *
- * Notes
- * -----
- * - the instructions BTS, BTC, BSH, BSW, BSL, BSQ in this section are optional;
- *   indicated with the BO-bit in MFW.
- *
- * Instructions
- * ------------
- *
- * Mnemo   Opcode  Src	Dest	Brief
- * -----   ------  ---  ----    -----
- * CLZ	   0x13    rid	r	Hamming weight/bit population (count of 1-bits)
- * HAM     0x14    rid  r       count leading zero bits
- * SWP     0x15    rid  r       byteswap
- *
- * Opcode Notes
- * ------------
- * BTR/BTS/BTC          - bits 0-1: 0 - reset, 1 - set, 2 - complement
- *                      - store original value in RF
- * SWP                  - parm - size shift count
- * - type width in bits: b - 8, h - 16, w - 32, q - 64, o - 128, h - 256
- */
-#define V0_CLZ 0x13
-#define V0_HAM 0x14
-/* support for 0x15 is optional */
-#define V0_SWP 0x15
+#define V0_CRP   0x12 //  ri, r   Compute reciprocal
+#define V0_MUL   0x13 //  ri, r   Multiplication, get low word of results
+#define V0_MUH   0x14 //  ri, r   Multiplication, get high word of results
 
 /*
  * SYSTEM OPERATIONS
  * -----------------
- * HLT     0x16                 halt the processor
- * RST     0x17                 reset system
- * CLI     0x18    adr          disable all interrupts, optionally store mask
- * STI     0x19    adr          enable interrupts, optionally restore/set mask
- * QIM     0x1a                 query interrupt mask
- * SIM     0x1b                 set interrupt mask
- * INT     0x1c    i            send/signal software interrupt  number (8-bit)
- * SLP     0x1d                 sleep/wait for interrupt
- * WFE     0x1e                 sleep/wait for event
- * SEV     0x1f                 signal event
+ * HLT     0x20                 halt the processor
+ * RST     0x21                 reset system
+ * CLI     0x22    adr          disable all interrupts, optionally store mask
+ * STI     0x23    adr          enable interrupts, optionally restore/set mask
+ * IRT     0x24
+ * INT     0x25    i            send/signal software interrupt  number (8-bit)
+ * SLP     0x26                 sleep/wait for interrupt
+ * WFE     0x27                 sleep/wait for event
+ * SEV     0x28                 signal event
  */
-#define V0_HLT 0x16 // halt (shutdown)
-#define V0_RST 0x17 // reset
-#define V0_CLI 0x18 // disable interrupts
-#define V0_STI 0x19 // enable interrupts
-#define V0_IRT 0x1a // return from interrupt handler
-#define V0_INT 0x1b // send/signal software interrupt
-#define V0_SLP 0x1c // wait for interrupt; low-weight alternative to busy-spin
-#define V0_WFE 0x1d // wait for event
-#define V0_SEV 0x1e // signal event
+#define V0_HLT 0x20 // halt (shutdown)
+#define V0_RST 0x21 // reset
+#define V0_CLI 0x22 // disable interrupts
+#define V0_STI 0x23 // enable interrupts
+#define V0_IRT 0x24 // return from interrupt handler
+#define V0_INT 0x25 // send/signal software interrupt
+#define V0_SLP 0x26 // wait for interrupt; low-weight alternative to busy-spin
+#define V0_WFE 0x27 // wait for event
+#define V0_SEV 0x28 // signal event
 
 /*
  * LOAD-STORE OPERATIONS
@@ -171,12 +143,12 @@
  *
  * Mnemo   Opcode  Src	Dest	Brief
  * -----   ------  ---  ----    -----
- * LDR     0x20    rd   r       load register
- * LDX     0x21    rd   r       load register and sign-extend
- * STR     0x22    r    rm      store register
- * STX     0x23    r    rm      store register with sign-extension
- * RSR     0x24                 read system register
- * WSR     0x25                 write system register
+ * LDR     0x30    rd   r       load register
+ * LDX     0x31    rd   r       load register and sign-extend
+ * STR     0x32    r    rm      store register
+ * STX     0x33    r    rm      store register with sign-extension
+ * RSR     0x34                 read system register
+ * WSR     0x35                 write system register
  *
  * Opcode Notes
  * ------------
@@ -185,43 +157,43 @@
  * - type width in bits: b - 8, h - 16, w - 32, q - 64
  * - corresponding parm: b - 0, h - 1, w - 2, q - 3
  */
-#define V0_LDR 0x20
-#define V0_LDX 0x21
-#define V0_STR 0x22
-#define V0_STX 0x23
-#define V0_RSR 0x24
-#define V0_WSR 0x25
+#define V0_LDR 0x30
+#define V0_LDX 0x31
+#define V0_STR 0x32
+#define V0_STX 0x33
+#define V0_RSR 0x34
+#define V0_WSR 0x35
 
 /* STACK OPERATIONS
  * ----------------
  *
  * Mnemo   Opcode  Src          Brief
  * -----   ------  ---          -----
- * PSH     0x24    r            push register
- * POP     0x25    r            pop register
- * PSM     0x26    ri           push many registers
- * POM     0x27    ri           pop many registers
+ * PSH     0x34    r            push register
+ * POP     0x35    r            pop register
+ * PSM     0x36    ri           push many registers
+ * POM     0x37    ri           pop many registers
  *
  * Opcode Notes
  * ------------
  * PSH/PSM, POP/POM     - 0x01 denotes push (write) operation
  */
-#define V0_PSH 0x26
-#define V0_POP 0x27
-#define V0_PSM 0x28
-#define V0_POM 0x29
+#define V0_PSH 0x36
+#define V0_POP 0x37
+#define V0_PSM 0x38
+#define V0_POM 0x39
 
 /* INPUT-OUTPUT OPERATIONS
- * IRD     0x28    ri   r       read I/O port                   port, destreg
- * IWR     0x29    ri   r       write I/O port                  port, srcreg
- * ICF     0x2a    ri   r       configure I/O port              port, valreg
+ * IRD     0x38    ri   r       read I/O port                   port, destreg
+ * IWR     0x39    ri   r       write I/O port                  port, srcreg
+ * ICF     0x3a    ri   r       configure I/O port              port, valreg
  *
  * V0_IRD               - bits 0-1 of parm are shift count for operation size
  * V0_IWR               - bits 0-1 of parm are shift count for operation size
  */
-#define V0_IRD 0x2a
-#define V0_IWR 0x2b
-#define V0_ICF 0x2c
+#define V0_IRD 0x3a
+#define V0_IWR 0x3b
+#define V0_ICF 0x3c
 
 /*
  * BRANCH AND SUBROUTINE OPERATIONS
@@ -232,24 +204,24 @@
  *
  * Mnemo   Opcode  Src	Dest	Brief                           Arguments
  * -----   ------  ---  ----    -----                           ---------
- * JMP     0x30         rdm     jump; branch unconditionally
- * JMR     0x31         rdm     short [relative] jump
- * BIZ     0x32         rdm     branch if zero
- * BEQ     0x32         rdm     synonym for BIZ
- * BNZ     0x33         rdm     branch if non-zero
- * BNE     0x33         rdm     synonym for BNZ
- * BLT     0x34         rdm     branch if less than
- * BLE     0x35         rdm     branch if less than or equal
- * BGT     0x36         rdm     branch if greater than
- * BGE     0x37         rdm     branch if greater than or equal
- * BIO     0x38         rdm     branch if overflow
- * BNO     0x39         rdm     branch if no overflow
- * BIC     0x3a         rdm     branch if carry
- * BNC     0x3b         rdm     branch if no carry
- * CSR     0x3c         rdm     call subroutine
- * BEG     0x3d    ri   rdm     function prologue; adjust stack
- * FIN     0x3e    ri   rdm     function epilogue; adjust stack
- * RET     0x3f         rdm     return from subroutine
+ * JMP     0x40         rdm     jump; branch unconditionally
+ * JMR     0x41         rdm     short [relative] jump
+ * BIZ     0x42         rdm     branch if zero
+ * BEQ     0x42         rdm     synonym for BIZ
+ * BNZ     0x43         rdm     branch if non-zero
+ * BNE     0x43         rdm     synonym for BNZ
+ * BLT     0x44         rdm     branch if less than
+ * BLE     0x45         rdm     branch if less than or equal
+ * BGT     0x46         rdm     branch if greater than
+ * BGE     0x47         rdm     branch if greater than or equal
+ * BIO     0x48         rdm     branch if overflow
+ * BNO     0x49         rdm     branch if no overflow
+ * BIC     0x4a         rdm     branch if carry
+ * BNC     0x4b         rdm     branch if no carry
+ * CSR     0x4c         rdm     call subroutine
+ * BEG     0x4d    ri   rdm     function prologue; adjust stack
+ * FIN     0x4e    ri   rdm     function epilogue; adjust stack
+ * RET     0x4f         rdm     return from subroutine
  *
  * Opcode Notes
  * ------------
@@ -259,24 +231,24 @@
  * BC/BNC               - 0x01 denotes zero-flag condition
  *
  */
-#define V0_JMP 0x30
-#define V0_JMR 0x31
-#define V0_BIZ 0x32
-#define V0_BEQ 0x32
-#define V0_BNZ 0x33
-#define V0_BNE 0x33
-#define V0_BLT 0x34
-#define V0_BLE 0x35
-#define V0_BGT 0x36
-#define V0_BGE 0x37
-#define V0_BIO 0x38
-#define V0_BNO 0x39
-#define V0_BIC 0x3a
-#define V0_BNC 0x3b
-#define V0_CSR 0x3c
-#define V0_BEG 0x3d
-#define V0_FIN 0x3e
-#define V0_RET 0x3f
+#define V0_JMP 0x40
+#define V0_JMR 0x41
+#define V0_BIZ 0x42
+#define V0_BEQ 0x42
+#define V0_BNZ 0x43
+#define V0_BNE 0x43
+#define V0_BLT 0x44
+#define V0_BLE 0x45
+#define V0_BGT 0x46
+#define V0_BGE 0x47
+#define V0_BIO 0x48
+#define V0_BNO 0x49
+#define V0_BIC 0x4a
+#define V0_BNC 0x4b
+#define V0_CSR 0x4c
+#define V0_BEG 0x4d
+#define V0_FIN 0x4e
+#define V0_RET 0x4f
 
 #endif /* __V0_VM_ISA_H__ */
 
