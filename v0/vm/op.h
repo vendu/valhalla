@@ -9,10 +9,11 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <endian.h>
-//#include <zero/param.h>
 //#include <zero/cdefs.h>
 //#include <zero/trix.h>
 //#include <zero/fastudiv.h>
+#include <valhalla/param.h>
+#include <valhalla/util.h>
 #include <v0/vm/isa.h>
 #include <v0/vm/vm.h>
 #include <vas/vas.h>

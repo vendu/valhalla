@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sys/time.h>
+#include <valhalla/util.h>
 #include <v0/vm/vm.h>
 #include <v0/vm/io.h>
 #include <v0/vm/dev.h>

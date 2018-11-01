@@ -4,6 +4,10 @@
 #define min(a, b) ((b) ^ (((a) ^ (b)) & -((a) < (b))))
 #define max(a, b) ((a) ^ (((a) ^ (b)) & -((a) < (b))))
 
+#if !defined(powerof2)
+#define powerof2(x)     (!((x) & ((x) - 1)))
+#endif
+
 #define roundup2(a, b2) (((a) + ((b2) - 0x01)) & -(b2))
 #define rounddown2(a, b2) ((a) & ~((b2) - 0x01))
 
