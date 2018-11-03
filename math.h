@@ -46,7 +46,7 @@ crp(uint64_t x) {
 }
 
 static INLINE float
-crpf_fma(float x)
+divuf_fma(float x)
 {
     uint32_t    u32;
     float       f;
@@ -74,10 +74,10 @@ crpf_fma(float x)
 }
 
 static INLINE float
-crpf_mul(float x)
+divuf_mul(float x)
 {
     uint32_t     u32;
-    float flt;
+    float        flt;
     union {
         float    flt;
         unsigned u32;

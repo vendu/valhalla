@@ -1,5 +1,8 @@
+/* HAZARD: this file is seriously broken at the moment... =) */
+
 /* compute reciprocals accurate to 24 bits */
 
+#include <stdio.h>
 #include <stdint.h>
 #include <valhalla/util.h>
 
@@ -33,7 +36,6 @@ crp24(uint32_t num, uint32_t div)
 {
     uint64_t r = clz32(div);
     uint64_t e = 1;
-    uint64_t r;
     uint64_t t = r * div;
 
     e -= t;
@@ -51,7 +53,7 @@ crp24(uint32_t num, uint32_t div)
 
 /* r = clz32(div), e = r * div - 1, t = (1 - e) * r */
 uint32_t
-crp24(uint32_t num, uint32_t div)
+crp24(uint32_t div)
 {
     uint32_t r = clz32(div);
     uint32_t t = r * div;
@@ -147,29 +149,41 @@ divu32(uint32_t num, uint32_t div)
 }
 #endif
 
-#if 0
+static INLINE uint64_t
+norm64u32(uint32_t val, uint32_t *retlog2)
+{
+    uint64_t res = val;
+    uint32_t cnt = 64 - clz32(val);
+
+    if (res) {
+        res <<= cnt;
+        *retlog2 = cnt;
+    }
+
+    return res;
+}
 
 uint32_t
 divu32(uint32_t num, uint32_t div)
 {
-    uint32_t val = div;
+    uint64_t val = div;
     uint32_t log2;
     uint64_t res;
     uint64_t tmp1;
     uint64_t tmp2;
 
-    val = normu32(val, &log2);
+    val = norm64u32(val, &log2);
+    fprintf(stderr, "DIV: %x - LOG2: %u - NORM32: %x\n", div, log2, val);
     tmp1 = val;
     tmp1 <<= 5; /* tmp1 = val * 32 */
-    tmp2 = tmp1 + 48; /* tmp2 = val + 32 / 17 */
+    tmp2 += tmp1 + 48; /* tmp2 = val + 32 / 17 */
     tmp1 = divu17(tmp2); /* tmp1 = 32/17 * val + 48/17 */
     tmp2 = tmp1 * (2 - val * res);
     tmp1 = tmp2 * (2 - val * tmp2);
     tmp2 = tmp1 * (2 - val * tmp1);
     res = tmp2 * num;
-    res >>= log2;
+    //    res >>= log2;
 
     return (uint32_t)res;
 }
 
-#endif
