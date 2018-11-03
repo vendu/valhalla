@@ -68,8 +68,9 @@
 #define V0_CONST4 0x0f0f0f0f // mask for ham
 #define V0_CONST5 0x00ff00ff // mask for ham
 #define V0_CONST6 0x0000ffff // low 16-bit mask of all 1-bits
-#define V0_CONST7 0xffffffff // 32-bit mask of all 1-bits (mul/muh)
-#define V0_CONST8 0x80000000 // sign-bit
+#define V0_CONST7 0xffff0000 // high 16-bit mask of all 1-bits (clz)
+#define V0_CONST8 0xffffffff // 32-bit mask of all 1-bits (mul/muh)
+#define V0_CONST9 0x80000000 // sign-bit
 
 /*
  * V0 Operations
@@ -107,7 +108,7 @@
  * sar(a, n) ((a) >> (n)) arithmetic shift by n bits (fill-with-sign)
  * clz(a)    evaluates to leading-zero count
  * ham(a)    evaluates to hamming weight
- * mul(a, b) (b64 = (a) * (b), and((b64), V0_CONST7))
+ * mul(a, b) (b64 = (a) * (b), and((b64), V0_CONST8))
  * muh(a, b) (b64 = (a) * (b), shr((b64), 32))
  * crp(a)    reciprocal R so that B/A <=> B*R
  * div(a, b) ((b) * crp(a))
@@ -151,22 +152,22 @@
       (out32) = _res32;                                                 \
   } while (0)
 
-// out32 = _tmp32 - V0_CONST7 (-1)
+// out32 = _tmp32 - V0_CONST8 (-1)
 // OPS: sub
 #define v0incop2(src32, out32)                                          \
     do {                                                                \
         v0ureg _tmp32 = (src32);                                        \
-        v0ureg _res32 = _tmp32 - V0_CONST7;                             \
+        v0ureg _res32 = _tmp32 - V0_CONST8;                             \
                                                                         \
         (out32) = _res32;                                               \
     } while (0)
 
-// out32 = _tmp32 + V0_CONST7 (-1)
+// out32 = _tmp32 + V0_CONST8 (-1)
 // OPS: add
 #define v0decop1(src32, out32)                                          \
   do {                                                                  \
       v0ureg _tmp32 = (src32);                                          \
-      v0ureg _res32 = _tmp32 + V0_CONST7;                               \
+      v0ureg _res32 = _tmp32 + V0_CONST8;                               \
                                                                         \
       (out32) = _res32;                                                 \
   } while (0)
@@ -294,20 +295,20 @@
       (out32) = (_res32);                                               \
   } while (0)
 
-// out32 = V0_CONST7 ^ (src32), logical negation
+// out32 = V0_CONST8 ^ (src32), logical negation
 // OPS: xor
 #define v0notop(src32, out32)                                           \
   do {                                                                  \
-      v0reg _res32 = (src32) ^ V0_CONST7;                               \
+      v0reg _res32 = (src32) ^ V0_CONST8;                               \
                                                                         \
       (out32) = _res32;                                                 \
   } while (0)
 
-// out32 = V0_CONST7 - (src32), logical negation
+// out32 = V0_CONST8 - (src32), logical negation
 // OPS: sub
 #define v0notop2(src32, out32)                                          \
   do {                                                                  \
-      v0reg _tmp32 = V0_CONST7;                                         \
+      v0reg _tmp32 = V0_CONST8;                                         \
       v0reg _res32 = _tmp32 - (src32);                                  \
                                                                         \
       (out32) = _res32;                                                 \
@@ -355,40 +356,40 @@
   } while (0)
 
 // count leading zero bits in src32
-#define v0clzop(u32, r)                                                 \
+#define v0clzop(src32, out32)                                           \
     do {                                                                \
-        uint32_t __res = 0;                                             \
-        uint32_t __tmp = (u32);                                         \
-        uint32_t __mask = 0xffff0000;                                   \
+        uint32_t _res32 = 0;                                            \
+        uint32_t _tmp32 = (src32);                                      \
+        uint32_t _mask32 = V0_CONST7;                                   \
                                                                         \
-        if (__tmp) {                                                    \
-            if (!(__tmp & __mask)) {                                    \
-                __res += 16;                                            \
-                __tmp <<= 16;                                           \
+        if (_tmp32) {                                                   \
+            if (!(_tmp32 & _mask32)) {                                  \
+                _res32 += 16;                                           \
+                _tmp32 <<= 16;                                          \
             }                                                           \
-            __mask <<= 8;                                               \
-            if (!(__tmp & __mask)) {                                    \
-                __res += 8;                                             \
-                __tmp <<= 8;                                            \
+            _mask32 <<= 8;                                              \
+            if (!(_tmp32 & _mask32)) {                                  \
+                _res32 += 8;                                            \
+                _tmp32 <<= 8;                                           \
             }                                                           \
-            __mask <<= 4;                                               \
-            if (!(__tmp & __mask)) {                                    \
-                __res += 4;                                             \
-                __tmp <<= 4;                                            \
+            _mask32 <<= 4;                                              \
+            if (!(_tmp32 & _mask32)) {                                  \
+                _res32 += 4;                                            \
+                _tmp32 <<= 4;                                           \
             }                                                           \
-            __mask <<= 2;                                               \
-            if (!(__tmp & __mask)) {                                    \
-                __res += 2;                                             \
-                __tmp <<= 2;                                            \
+            _mask32 <<= 2;                                              \
+            if (!(_tmp32 & _mask32)) {                                  \
+                _res32 += 2;                                            \
+                _tmp32 <<= 2;                                           \
             }                                                           \
-            __mask <<= 1;                                               \
-            if (!(__tmp & __mask)) {                                    \
-                __res++;                                                \
+            _mask32 <<= 1;                                              \
+            if (!(_tmp32 & _mask32)) {                                  \
+                _res32++;                                               \
             }                                                           \
         } else {                                                        \
-            __res = 32;                                                 \
+            _res32 = 32;                                                \
         }                                                               \
-        (r) = __res;                                                    \
+        out32 = _res32;                                                 \
     } while (0)
 
 #if 0
@@ -397,7 +398,7 @@
       v0reg _cnt32 = 32;                                                \
       v0reg _res32 = V0_CONST0;                                         \
       v0reg _tmp32 = (src32);                                           \
-      v0reg _ones = V0_CONST7;                                          \
+      v0reg _ones = V0_CONST8;                                          \
       v0reg _mask32 = V0_CONST6;                                        \
                                                                         \
       if (_tmp32 == _ones) {                                            \
@@ -521,7 +522,7 @@
 #define v0sexop(src32, out32)                                           \
   do {                                                                  \
       v0reg _tmp32 = (src32);                                           \
-      v0reg _sign32 = (src32) & V0_CONST8;                              \
+      v0reg _sign32 = (src32) & V0_CONST9;                              \
       v0reg _clz32;                                                     \
       v0reg _cnt32;                                                     \
                                                                         \
