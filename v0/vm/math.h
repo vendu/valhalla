@@ -392,62 +392,6 @@
         out32 = _res32;                                                 \
     } while (0)
 
-#if 0
-#define v0clzop(src32, out32)                                           \
-  do {                                                                  \
-      v0reg _cnt32 = 32;                                                \
-      v0reg _res32 = V0_CONST0;                                         \
-      v0reg _tmp32 = (src32);                                           \
-      v0reg _ones = V0_CONST8;                                          \
-      v0reg _mask32 = V0_CONST6;                                        \
-                                                                        \
-      if (_tmp32 == _ones) {                                            \
-          (out32) = _res32;                                             \
-      } else if (_tmp32) {                                              \
-          _cnt32 >>= 1;                                                 \
-          _res32 = V0_CONST0;                                           \
-          if (!(_tmp32 &_mask32)) {                                     \
-              _mask32 = ~INT32_C(0);;                                   \
-              _mask32 <<= _cnt32;                                       \
-              if (!(_tmp32 &_mask32)) {                                 \
-                  _tmp32 <<= _cnt32;                                    \
-                  _tmp32 += _cnt32;                                     \
-                  _cnt32 >>= 1;                                         \
-                  _res32 += _cnt32;                                     \
-              }                                                         \
-              _mask32 <<= _cnt32;                                       \
-              if (!(_tmp32 &_mask32)) {                                 \
-                  _tmp32 <<= _cnt32;                                    \
-                  _tmp32 += _cnt32;                                     \
-                  _cnt32 >>= 1;                                         \
-                  _res32 += _cnt32;                                     \
-              }                                                         \
-              _mask32 <<= _cnt32;                                       \
-              if (!(_tmp32 &_mask32)) {                                 \
-                  _tmp32 <<= _cnt32;                                    \
-                  _tmp32 += _cnt32;                                     \
-                  _cnt32 >>= 1;                                         \
-                  _res32 += _cnt32;                                     \
-              }                                                         \
-              _mask32 <<= _cnt32;                                       \
-              if (!(_tmp32 &_mask32)) {                                 \
-                  _tmp32 <<= _cnt32;                                    \
-                  _tmp32 += _cnt32;                                     \
-                  _cnt32 >>= 1;                                         \
-                  _res32 += _cnt32;                                     \
-              }                                                         \
-              _mask32 <<= _cnt32;                                       \
-              if (!(_tmp32 &_mask32)) {                                 \
-                  _res32++;                                             \
-              }                                                         \
-          }                                                             \
-          (out32) = _res32;                                             \
-      } else {                                                          \
-          (out32) = _res32;                                             \
-      }                                                                 \
-  } while (0)
-#endif
-
 /* compute the Hamming weight, i.e. the number of 1-bits in a */
 
 /* #L1: each 2-bit chunk sums 2 bits */
@@ -456,57 +400,13 @@
 /* #L5: each 16-bit chunk sums 16 bits */
 #define _v0hamop1(src32, out32)                                         \
   do {                                                                  \
-      (src32) = (((src32) >> 1) & V0_CONST3) + ((src32) & V0_CONST3);   \
-      (src32) = (((src32) >> 2) & V0_CONST2) + ((src32) & V0_CONST2);   \
-      (src32) = (((src32) >> 4) & V0_CONST4) + ((src32) & V0_CONST4);   \
-      (src32) = (((src32) >> 8) & V0_CONST5) + ((src32) & V0_CONST5);   \
-      (out32) = ((src32) >> 16) + ((src32) & V0_CONST6);                \
-  } while (0)
-/* masks in registers */
-#define _v0hamop2(src32, out32)                                         \
-  do {                                                                  \
-      static v0reg _mask32a = INT32_C(V0_CONST3);                       \
-      static v0reg _mask32b = INT32_C(V0_CONST2);                       \
-      static v0reg _mask32c = INT32_C(V0_CONST4);                       \
-      static v0reg _mask32d = INT32_C(V0_CONST5);                       \
-      static v0reg _mask32e = INT32_C(V0_CONST6);                       \
+      v0reg _res32 = (src32);                                           \
                                                                         \
-      (src32) = (((src32) >> 1) & _mask32a) + ((src32) & _mask32a);     \
-      (src32) = (((src32) >> 2) & _mask32b) + ((src32) & _mask32b);     \
-      (src32) = (((src32) >> 4) & _mask32c) + ((src32) & _mask32c);     \
-      (src32) = (((src32) >> 8) & _mask32d) + ((src32) & _mask32d);     \
-      (out32) = ((src32) >> 16) + ((src32) & _mask32e);                 \
-  } while (0)
-
-/* masks in registers with a couple of temporary registers */
-#define _v0hamop3(src32, out32)                                         \
-  do {                                                                  \
-      v0reg        _val32 = (src32) >> 1;                               \
-      v0reg        _tmp32a = (src32) & V0_CONST2;                       \
-      v0reg        _tmp32b = _val32 & V0_CONST2;                        \
-                                                                        \
-      _val32 = _tmp32a + _tmp32b;                                       \
-      _tmp32a = _val32;                                                 \
-      _tmp32b = _val32 >> 2;                                            \
-      _tmp32a &= V0_CONST3;                                             \
-      _tmp32b &= V0_CONST3;                                             \
-      _val32 = _tmp32a + _tmp32b;                                       \
-      _tmp32a = _val32;                                                 \
-      _tmp32b = _val32 >> 4;                                            \
-      _tmp32a &= V0_CONST4;                                             \
-      _tmp32b &= V0_CONST4;                                             \
-      _val32 = _tmp32a + _tmp32b;                                       \
-      _tmp32a = _val32;                                                 \
-      _tmp32b = _val32 >> 8;                                            \
-      _tmp32a &= V0_CONST5;                                             \
-      _tmp32b &= V0_CONST5;                                             \
-      _val32 = _tmp32a + _tmp32b;                                       \
-      _tmp32a = _val32;                                                 \
-      _tmp32b = _val32 >> 16;                                           \
-      _tmp32a &= V0_CONST6;                                             \
-      _tmp32b &= V0_CONST6;                                             \
-      _val32 = _tmp32a + _tmp32b;                                       \
-      (out32) = _val32;                                                 \
+      (_res32) = (((_res32) >> 1) & V0_CONST3) + ((_res32) & V0_CONST3); \
+      (_res32) = (((_res32) >> 2) & V0_CONST2) + ((_res32) & V0_CONST2); \
+      (_res32) = (((_res32) >> 4) & V0_CONST4) + ((_res32) & V0_CONST4); \
+      (_res32) = (((_res32) >> 8) & V0_CONST5) + ((_res32) & V0_CONST5); \
+      (out32) = ((_res32) >> 16) + ((_res32) & V0_CONST6);              \
   } while (0)
 
 #define v0hamop(src32, dest32, out32)                                   \
@@ -514,7 +414,7 @@
       v0reg _tmp32 = (dest32);                                          \
       v0reg _res32;                                                     \
                                                                         \
-      _v0hamop2(_tmp32, _res32);                                        \
+      _v0hamop1(_tmp32, _res32);                                        \
       (out32) = _tmp32;                                                 \
   } while (0)
 
