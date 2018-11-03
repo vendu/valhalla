@@ -63,15 +63,16 @@
  * AND   0x09    rid  r       logical AND
  * XOR   0x0a    rid  r       logical exclusive OR
  * IOR   0x0b    rid  r       logical inclusive OR
- * SHL   0x0c    ri     r       shift left [logical/fill with zero]
- * SHR   0x0d    ri     r       shift right logical (fill with zero)
- * SAR   0x0e    ri     r       shift right arithmetic (fill with sign-bit)
- * CRP   0x0f    rid    r       calculate reciprocal
- * MUL   0x10    rid    r       multiply and return low word
- * MUH   0x11    rid    r       multiply and return high word
- * CLZ	 0x12    rid  r	      Hamming weight/bit population (count of 1-bits)
- * HAM   0x13    rid  r       count leading zero bits
- * SWP   0x14    rid  r       byteswap
+ * SHL   0x0c    ri   r       shift left [logical/fill with zero]
+ * SHR   0x0d    ri   r       shift right logical (fill with zero)
+ * SAR   0x0e    ri   r       shift right arithmetic (fill with sign-bit)
+ * CRP   0x0f    rid  r       calculate reciprocal
+ * MUL   0x10    rid  r       multiply and return low word
+ * MUH   0x11    rid  r       multiply and return high word
+ * SEX	 0x12    rid  r	      sign-extend operand to given size
+ * CLZ	 0x13    rid  r	      Hamming weight/bit population (count of 1-bits)
+ * HAM   0x14    rid  r       count leading zero bits
+ * SWP   0x15    rid  r       byteswap
  */
 #define V0_INC 0x01 // r     increment by one
 #define V0_DEC 0x02 // r     decrement by one
