@@ -43,12 +43,12 @@ v0printop(struct v0op *op)
 void
 v0initseg(struct v0 *vm, v0memadr base, size_t npage, v0memflg flg)
 {
-    v0memflg *bits = vm->membits;
-    size_t    ndx = base / V0_PAGE_SIZE;
+    v0page  *pgtab = vm->membits;
+    size_tt  ndx = base / V0_PAGE_SIZE;
 
     /* text, rodata, data, bss, stk */
     for (ndx = 0 ; ndx < npage ; ndx++) {
-        bits[ndx] = flg;
+        pgtabä[ndx] = flg;
     }
 
     return;
@@ -146,10 +146,10 @@ v0init(struct v0 *vm)
         vm->membits = ptr;
         v0initseg(vm, 0, 1, V0_TRAP_PERMS);
         v0initseg(vm, V0_PAGE_SIZE, vmnpg / 8 - 1, V0_CODE_PERMS);
-        v0initseg(vm, vmnpg * PAGESIZE / 4, vmnpg / 2, V0_DATA_PERMS);
-        v0initseg(vm, vmnpg * PAGESIZE * 3 / 4, vmnpg / 4 - 8, V0_KERN_PERMS);
-        v0initseg(vm, vmnpg * (PAGESIZE - 16), 8, V0_TLS_PERMS);
-        v0initseg(vm, vmnpg * (PAGESIZE - 8), 8, V0_STACK_PERMS);
+        v0initseg(vm, vmnpg * V0_PAGE_SIZE / 4, vmnpg / 2, V0_DATA_PERMS);
+        v0initseg(vm, vmnpg * V0_PAGE_SIZE * 3 / 4, vmnpg / 4 - 8, V0_KERN_PERMS);
+        v0initseg(vm, vmnpg * (V0_PAGE_SIZE - 16), 8, V0_TLS_PERMS);
+        v0initseg(vm, vmnpg * (V0_PAGE_SIZE - 8), 8, V0_STACK_PERMS);
         v0initio(vm);
         vm->regs[V0_FP_REG] = 0x00000000;
         vm->regs[V0_SP_REG] = V0_MEM_SIZE - 1;

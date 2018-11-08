@@ -15,7 +15,7 @@ typedef int64_t  v0wreg; // full-width register (temporary values)
 typedef int32_t  v0reg;  // signed user-register type
 typedef uint32_t v0ureg; // unsigned user-register type
 typedef v0ureg   v0memadr; // memory address
-typedef uint8_t  v0memflg;
+typedef uin32_t  v0page;
 typedef void     v0iofunc_t(struct v0 *vm, uint8_t port, v0reg reg);
 
 struct v0iofuncs {
@@ -62,36 +62,25 @@ struct v0iofuncs {
 #define V0_PC_REG        (V0_INT_REGS + 0) // program counter
 #define V0_FP_REG        (V0_INT_REGS + 1) // frame pointer
 #define V0_SP_REG        (V0_INT_REGS + 2) // stack pointer
-#define V0_MSW_REG       (V0_INT_REGS + 3) // machine status word
-#define V0_IMR_REG       (V0_INT_REGS + 4) // interrupt-mask (1-bit for enabled)
-#define V0_IVR_REG       (V0_INT_REGS + 5) // interrupt vector address
-#define V0_PDR_REG       (V0_INT_REGS + 6) // page directory address
-/* V0_SEG_REG stores # of segments (max 256) in low-order 8-bit byte */
-/* - segment-table must be aligned to 256-byte boundary */
-#define V0_SEG_REG       (V0_INT_REGS + 7) // segment table address
+#define V0_RET_REG       (V0_INT_REGS + 3) // return address
+#define V0_MSW_REG       (V0_INT_REGS + 4) // machine status word
+#define V0_IMR_REG       (V0_INT_REGS + 5) // interrupt-mask (1-bit for enabled)
+#define V0_IVR_REG       (V0_INT_REGS + 6) // interrupt vector address
+#define V0_PDR_REG       (V0_INT_REGS + 7) // page directory address
+#define V0_THR_REG       (V0_INT_REGS + 8) // thread ID + permission flags
 /* READ-ONLY REGISTERS */
 #define V0_MFW_REG       (V0_INT_REGS + V0_SYS_REGS - 1) // machine feature word
 #define V0_SYS_REGS      16
 /* system register IDs */
-#if (__BYTE_ORDER == __LITTLE_ENDIAN)
-#define V0_RET_LO        0x00 // [dual-word] return value register, low word
-#define V0_RET_HI        0x01 // [dual-word] return value register, high word
-#else
-#define V0_RET_HI        0x00 // [dual-word] return value register, high word
-#define V0_RET_LO        0x01 // [dual-word] return value register, low word
-#endif
-#define V0_STD_REGS      32   // total number of user and system registers
+#define V0_STD_REGS      (V0_INT_REGS + V0_SYS_REGS) // total number of user and system registers
 // shadow registers are used for function and system calls instead of stack
-#define V0_SR(x)         (V0_STD_REGS + (x)) // shadow-registers
+#define V0_SREG(x)       (V0_STD_REGS + (x)) // shadow-registers
 /* values for regs[V0_MSW] */
 #define V0_MSW_DEF_BITS  (V0_IF_BIT)
-#define V0_MSW_ZF_BIT    (1 << 0)  // zero-flag; arg1 == arg2
+#define V0_MSW_OF_BIT    (1 << 0)  // overflow
 #define V0_MSW_CF_BIT    (1 << 1)  // carry-flag, return bit for BTR, BTS, BTC
-#define V0_MSW_OF_BIT    (1 << 2)  // overflow
-#define V0_MSW_IF_BIT    (1 << 3)  // interrupts enabled
-#define V0_MSW_SM_BIT    (1 << 29) // system-mode
-#define V0_MSW_ML_BIT    (1 << 30) // memory-bus lock-flag
-#define V0_MSW_SF_BIT    (1 << 31) // signed resuit; arg1 > arg2
+#define V0_MSW_IF_BIT    (1 << 2)  // interrupts enabled
+#define V0_MSW_MF_BIT    (1 << 31) // memory-bus lock-flag
 /* program segments */
 #define V0_TRAP_SEG      0x00
 #define V0_CODE_SEG      0x01 // code
@@ -125,7 +114,7 @@ struct v0seg {
 
 struct v0 {
     v0reg             regs[V0_INT_REGS + V0_SYS_REGS];
-    struct v0seg      segs[V0_SEGS];
+  //    struct v0seg      segs[V0_SEGS];
     long              flg;
     v0memflg         *membits;
     char             *mem;
@@ -182,8 +171,8 @@ union v0oparg {
 #define V0_REG_ADR       0x00 // %reg, argument in register
 #define V0_DIR_ADR       0x01 // $val, address follows opcode
 #define V0_IMM_ADR       0x02 // $val, address in val-field
+#define V0_NDX_ADR       0x03 // ndx(%reg) << op->parm], ndx follows opcode
 #define V0_PIC_ADR       V0_IMM_ADR // PC-relative addressing-mode
-#define V0_NDX_ADR       0x03 // %reg[ndx << op->parm], ndx follows opcode
 /* parm-field */
 #define V0_TRAP_BIT      0x01 // breakpoint
 #define V0_AUX_BIT       0x04 // reserved for per-instruction flags
