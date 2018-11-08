@@ -5,7 +5,7 @@
 #define V0_PRINT_XCPT
 #define V0_DEBUG_TABS
 
-#define V0_RAM_SIZE          (8 * _MEGABYTE)ä
+#define V0_RAM_SIZE          (8 * _MEGABYTE)
 #define V0_PAGE_SIZE         1024
 #define V0_CACHE_LINE_SIZE   32 // cacheline size
 #define V0_CACHE_STRIDE_SIZE 128 // cache fetch size

@@ -15,7 +15,7 @@ typedef int64_t  v0wreg; // full-width register (temporary values)
 typedef int32_t  v0reg;  // signed user-register type
 typedef uint32_t v0ureg; // unsigned user-register type
 typedef v0ureg   v0memadr; // memory address
-typedef uin32_t  v0page;
+typedef v0ureg   v0pagedesc;
 typedef void     v0iofunc_t(struct v0 *vm, uint8_t port, v0reg reg);
 
 struct v0iofuncs {
@@ -62,7 +62,7 @@ struct v0iofuncs {
 #define V0_PC_REG        (V0_INT_REGS + 0) // program counter
 #define V0_FP_REG        (V0_INT_REGS + 1) // frame pointer
 #define V0_SP_REG        (V0_INT_REGS + 2) // stack pointer
-#define V0_RET_REG       (V0_INT_REGS + 3) // return address
+#define V0_RTA_REG       (V0_INT_REGS + 3) // return address
 #define V0_MSW_REG       (V0_INT_REGS + 4) // machine status word
 #define V0_IMR_REG       (V0_INT_REGS + 5) // interrupt-mask (1-bit for enabled)
 #define V0_IVR_REG       (V0_INT_REGS + 6) // interrupt vector address
@@ -77,10 +77,11 @@ struct v0iofuncs {
 #define V0_SREG(x)       (V0_STD_REGS + (x)) // shadow-registers
 /* values for regs[V0_MSW] */
 #define V0_MSW_DEF_BITS  (V0_IF_BIT)
-#define V0_MSW_OF_BIT    (1 << 0)  // overflow
-#define V0_MSW_CF_BIT    (1 << 1)  // carry-flag, return bit for BTR, BTS, BTC
-#define V0_MSW_IF_BIT    (1 << 2)  // interrupts enabled
-#define V0_MSW_MF_BIT    (1 << 31) // memory-bus lock-flag
+#define V0_MSW_ZF_BIT    (1U << 0)
+#define V0_MSW_OF_BIT    (1U << 1)  // overflow
+#define V0_MSW_CF_BIT    (1U << 2)  // carry-flag, return bit for BTR, BTS, BTC
+#define V0_MSW_IF_BIT    (1U << 3)  // interrupts enabled
+#define V0_MSW_MF_BIT    (1U << 31) // memory-bus lock-flag
 /* program segments */
 #define V0_TRAP_SEG      0x00
 #define V0_CODE_SEG      0x01 // code
@@ -116,7 +117,7 @@ struct v0 {
     v0reg             regs[V0_INT_REGS + V0_SYS_REGS];
   //    struct v0seg      segs[V0_SEGS];
     long              flg;
-    v0memflg         *membits;
+    v0pagedesc       *membits;
     char             *mem;
     struct v0iofuncs *iovec;
     FILE             *vtdfp;

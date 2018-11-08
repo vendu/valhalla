@@ -71,9 +71,9 @@
  * DIV   0x12    divide
  * SEX	 0x13    sign-extend operand to given size
  * LEA   0x14    load effective address
- * CLZ	 0x14    compute Hamming weight/bit population (count of 1-bits)
- * HAM   0x15    count leading zero bits
- * SWP   0x16    swap byte-order
+ * CLZ	 0x15    compute Hamming weight/bit population (count of 1-bits)
+ * HAM   0x16    count leading zero bits
+ * SWP   0x17    swap byte-order
  */
 #define V0_NOT 0x01
 #define V0_AND 0x02
@@ -89,6 +89,7 @@
 #define V0_SUB 0x0c
 #define V0_SBC 0x0d
 #define V0_CMP 0x0e
+#define V0_CRP 0x0f
 #define V0_MUL 0x10
 #define V0_MUH 0x11
 #define V0_DIV 0x12
@@ -105,16 +106,16 @@
  * Instructions
  * ------------
  *
- * Mnemo   Opcode  Brief              
- * -----   ------  -----     
+ * Mnemo   Opcode  Brief
+ * -----   ------  -----
  * JMP     0x20    jump; branch unconditionally
- * BEQ     0x21
- * BNE     0x22
- * BLT     0x23
- * BUL     0x24
- * BGT     0x25
- * BUG     0x26
- * BAF     0x27    
+ * BEQ     0x21    branch if equal/zero
+ * BNE     0x22    branch if not equal/zero
+ * BLT     0x23    branch if less than
+ * BUL     0x24    branch if unsigned less than
+ * BGT     0x25    branch if greater than
+ * BUG     0x26    branch if unsigned greater than
+ * BAF     0x27    branch if arithmetic flags (OF, CF) set
  * CSR     0x28    call subroutine
  * BEG     0x29    function prologue; adjust stack
  * FIN     0x2a    function epilogue; adjust stack
@@ -122,7 +123,7 @@
  * SYS     0x2c    enter system mode
  * SRT     0x2d    return from system modr
  * THR     0x2e    launch thread
- * TEX     0x2f    exit thread
+ * THX     0x2f    exit thread
  */
 #define V0_JMP 0x20
 #define V0_BEQ 0x21
@@ -131,15 +132,15 @@
 #define V0_BUL 0x24
 #define V0_BGT 0x25
 #define V0_BUG 0x26
-#define V0_BAF 0x27 // CF, OF
+#define V0_BAF 0x27
 #define V0_CSR 0x28
 #define V0_BEG 0x29
 #define V0_FIN 0x2a
 #define V0_RET 0x2b
 #define V0_SYS 0x2c
-#define V0_IRT 0x2d
+#define V0_SRT 0x2d
 #define V0_THR 0x2e
-#define V0_TEX 0x2f
+#define V0_THX 0x2f
 
 /*
  * LOAD-STORE OPERATIONS
@@ -155,7 +156,7 @@
  * RSR     0x32    read system register
  * WSR     0x33    write system register
  *
- Ã¤ Notes
+ ä Notes
  * -----
  * - parm - size shift count
  * - type width in bits: b - 8, h - 16, w - 32, q - 64
@@ -192,7 +193,8 @@
  * Instructions
  * ------------
  *
- * Mnemo   Opcode  Brief                   * -----   ------  -----
+ * Mnemo   Opcode  Brief
+ * -----   ------  -----
  * BAR     0x38    full memory barrier
  * BRD     0x39    memory read-barrier
  * BWR     0x3a    memory write-barrier
@@ -215,7 +217,8 @@
  * INPUT-OUTPUT OPERATIONS
  * -----------------------
  *
- * Mnemo   Opcode  Brief                   * -----   ------  -----
+ * Mnemo   Opcode  Brief
+ * -----   ------  -----
  * ICD     0x40    configure I/O device
  * IMM     0x41    map i/O memory
  * IRD     0X42    read I/O data
