@@ -81,7 +81,6 @@ struct v0iofuncs {
 #define V0_MSW_OF_BIT    (1U << 1)  // overflow
 #define V0_MSW_CF_BIT    (1U << 2)  // carry-flag, return bit for BTR, BTS, BTC
 #define V0_MSW_IF_BIT    (1U << 3)  // interrupts enabled
-#define V0_MSW_MF_BIT    (1U << 31) // memory-bus lock-flag
 /* program segments */
 #define V0_TRAP_SEG      0x00
 #define V0_CODE_SEG      0x01 // code
@@ -131,7 +130,6 @@ struct v0 {
  * 32-bit little-endian argument parcel
  * - declared as union for 32-bit alignment of all arguments
  */
-
 union v0oparg {
     v0ureg   adr;
     v0ureg   uval;
@@ -157,7 +155,6 @@ union v0oparg {
 #define v0adrtoptr(vm, adr)  ((void *)(&(vm)->mem[(adr)]))
 #define v0regtoptr(vm, reg)  ((void *)(&(vm)->regs[(reg)]))
 
-#define V0_REG_BIT       (1 << V0_REG_ADR)
 #define V0_DIR_BIT       (1 << V0_DIR_ADR)
 #define V0_IMM_BIT       (1 << V0_IMM_ADR)
 #define V0_NDX_BIT       (1 << V0_NDX_ADR)
@@ -168,12 +165,6 @@ union v0oparg {
 #define V0_RIM_ARG       (V0_R_ARG | V0_I_ARG | V0_M_ARG)
 #define V0_RM_ARG        (V0_R_ARG | V0_M_ARG)
 
-/* addressing modes */
-#define V0_REG_ADR       0x00 // %reg, argument in register
-#define V0_DIR_ADR       0x01 // $val, address follows opcode
-#define V0_IMM_ADR       0x02 // $val, address in val-field
-#define V0_NDX_ADR       0x03 // ndx(%reg) << op->parm], ndx follows opcode
-#define V0_PIC_ADR       V0_IMM_ADR // PC-relative addressing-mode
 /* parm-field */
 #define V0_TRAP_BIT      0x01 // breakpoint
 #define V0_AUX_BIT       0x04 // reserved for per-instruction flags

@@ -286,7 +286,6 @@ vasprocinst(struct vastoken *token, v0memadr adr,
 
                     break;
                 case VASTOKENREG:
-                    op->adr = V0_REG_ADR;
                     op->reg1 = token1->data.reg;
 
                     break;
@@ -334,7 +333,7 @@ vasprocinst(struct vastoken *token, v0memadr adr,
 
                     break;
             }
-            if (op->adr != V0_REG_ADR) {
+            if (!op->reg1) {
                 havearg = 1;
             }
             token2 = token1->next;
@@ -422,7 +421,7 @@ vasprocinst(struct vastoken *token, v0memadr adr,
             }
         }
     }
-    if (op->adr == V0_REG_ADR || (op->flg & V0_IMM_BIT)) {
+    if ((op->reg1) || (op->flg & V0_IMM_BIT)) {
         adr += sizeof(struct v0op);
     } else {
         adr += sizeof(struct v0op) + sizeof(union v0oparg);

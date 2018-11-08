@@ -35,10 +35,26 @@
 
 #define V0_NOP     0xff
 
+/* addressing modes */
+#define V0_IMM_ADR 0 // $val, address in val-field
+#define V0_DIR_ADR 1 // $val, address follows opcode
+#define V0_NDX_ADR 2 // reg[ndx << op->parm], ndx follows opcode
+#define V0_PIC_ADR 3 // pc[ndx << op->parm], ndx is val or follows opcode
+
 /*
  * ARITHMETIC-LOGICAL OPERATIONS
  * -----------------------------
- *
+ */
+/* flags for arithmetic and load-store instructions */
+#define V0_ATOM_BIT (1U << 0) // LOCK-prefix
+#define V0_SAT_BIT  (1U << 1) // SAT-prefix + size in parm
+#define V0_SATU_BIT (1U << 2) // SATU-prefix + size in parm
+/* flags for logical instructions */
+#define V0_INV_BIT  (1U << 0)
+/* flags for shift instructions */
+#define V0_MASK_BIT (1U << 0)
+#define V0_ROT_BIT  (1U << 1)
+/*
  * Notes
  * -----
  * - reciprocals as well as results are stored in [64-bit] registers
@@ -73,7 +89,12 @@
  * LEA   0x14    load effective address
  * CLZ	 0x15    compute Hamming weight/bit population (count of 1-bits)
  * HAM   0x16    count leading zero bits
- * SWP   0x17    swap byte-order
+ * BSW   0x17    swap byte-order
+ * BTS   0x18    test and set bit; return original value in ZF-bit
+ * BTC   0x19    test and clear bit; return original value in ZF-bit
+ * CAS   0x1a    compare and swap; return original value in register val
+ * LDL   0x1b    load linked
+ * STC   0x1c    store conditional (if unmodified)
  */
 #define V0_NOT 0x01
 #define V0_AND 0x02
@@ -82,22 +103,37 @@
 #define V0_SHL 0x05
 #define V0_SHR 0x06
 #define V0_SAR 0x07
-#define V0_INC 0x08
-#define V0_DEC 0x09
-#define V0_ADD 0x0a
-#define V0_ADC 0x0b
-#define V0_SUB 0x0c
-#define V0_SBC 0x0d
+#define V0_INC 0x08 // V0_ATOM_BIT
+#define V0_DEC 0x09 // V0_ATOM_BIT
+#define V0_ADD 0x0a // V0_ATOM_BIT
+#define V0_ADC 0x0b // V0_ATOM_BIT
+#define V0_SUB 0x0c // V0_ATOM_BIT
+#define V0_SBC 0x0d // V0_ATOM_BIT
 #define V0_CMP 0x0e
+/* multiplication and division operations */
 #define V0_CRP 0x0f
 #define V0_MUL 0x10
 #define V0_MUH 0x11
 #define V0_DIV 0x12
+/* sign-extend */
 #define V0_SEX 0x13
+/* load effective address */
 #define V0_LEA 0x14
+/* bit- and byte-operations */
 #define V0_CLZ 0x15
 #define V0_HAM 0x16
-#define V0_SWP 0x17
+#define V0_BSW 0x17
+/* set and clear bits */
+#define V0_BTS 0x18 // NEW
+#define V0_BTC 0x19 // NEW
+/* load-store instructions */
+#define V0_LDR 0x1a
+#define V0_STR 0x1b
+#define V0_RSR 0x1c
+#define V0_WSR 0x1d
+/* V0_MULTICORE extensions */
+#define V0_LDL 0x1e // V0_ACQ_BIT
+#define V0_STC 0x1f // clear cacheline ACQ-bit
 
 /*
  * CONTROL FLOW OPERATIONS
@@ -105,6 +141,10 @@
  *
  * Instructions
  * ------------
+ *
+ * NOTES
+ * -----
+ * - with register addressing, register ID 0 means PC-relative (PIC)
  *
  * Mnemo   Opcode  Brief
  * -----   ------  -----
@@ -139,8 +179,9 @@
 #define V0_RET 0x2b
 #define V0_SYS 0x2c
 #define V0_SRT 0x2d
-#define V0_THR 0x2e
-#define V0_THX 0x2f
+/* V0_MULTICORE extensions */
+#define V0_THR 0x2e // launch thread at *reg2, direct argument (uintptr_t)
+#define V0_THX 0x2f // exit thread, provide exit status to kernel
 
 /*
  * LOAD-STORE OPERATIONS
@@ -162,10 +203,6 @@
  * - type width in bits: b - 8, h - 16, w - 32, q - 64
  * - corresponding parm: b - 0, h - 1, w - 2, q - 3
  */
-#define V0_LDR 0x30
-#define V0_STR 0x31
-#define V0_RSR 0x32
-#define V0_WSR 0x33
 
 /*
  * STACK OPERATIONS
@@ -181,10 +218,10 @@
  * Opcode Notes
  * ------------
  */
-#define V0_PSH 0x34
-#define V0_POP 0x35
-#define V0_PSM 0x36
-#define V0_POM 0x37
+#define V0_PSH 0x34 // push register reg2
+#define V0_POP 0x35 // pop register reg2
+#define V0_PSM 0x36 // push 1 << parm registers starting from val
+#define V0_POM 0x37 // pop 1 << parm registers starting from val
 
 /*
  * SYNCHRONOUS OPERATIONS SUPPORT
@@ -195,23 +232,28 @@
  *
  * Mnemo   Opcode  Brief
  * -----   ------  -----
- * BAR     0x38    full memory barrier
- * BRD     0x39    memory read-barrier
- * BWR     0x3a    memory write-barrier
- * CPF     0x3b    cache prefetch
- * CLK     0x3c    lock cacheline
- * CLR     0x3d    releade cacheline
- * LDL     0x3e    load linked
- * STC     0x3f    store conditional (if unmodified)
+ * CPF     0x38    cache prefetch
+ * BAR     0x39    full memory barrier
+ * BRD     0x3a    memory read-barrier
+ * BWR     0x3b    memory write-barrier
+ * WFE     0x3c    sleep/wait for event
+ * SEV     0x3d    signal event
+#if 0
+ * CLK     0x3e    lock cacheline
+ * CLR     0x3f    release cacheline
+#endif
  */
-#define V0_BAR 0x38
-#define V0_BRD 0x39
-#define V0_BWR 0x3a
-#define V0_CPF 0x3b
-#define V0_CLK 0x3c
-#define V0_CLR 0x3d
-#define V0_LDL 0x3e
-#define V0_STC 0x3f
+#define V0_CPF 0x38
+/* V0_MULTICORE extensions */
+#define V0_BAR 0x39
+#define V0_BRD 0x3a
+#define V0_BWR 0x3b
+#define V0_WFE 0x3c
+#define V0_SEV 0x3d
+#if 0
+#define V0_CLK 0x3e
+#define V0_CLR 0x3f
+#endif
 
 /*
  * INPUT-OUTPUT OPERATIONS
@@ -237,17 +279,16 @@
  * SYSTEM OPERATIONS
  * -----------------
  *
- * Mnemo   Opcode  Brief                   * -----   ------  -----
+ * Mnemo   Opcode  Brief
+* -----   ------  -----
  * HLT     0x50    halt the processor
  * RST     0x51    reset system
  * CLI     0x52    disable all interrupts, optionally store mask
  * STI     0x53    enable interrupts, optionally restore/set mask
  * INT     0x54    send/signal software interrupt  number (8-bit)
  * SLP     0x55    sleep/wait for interrupt
- * WFE     0x56    sleep/wait for event
- * SEV     0x57    signal event
- * FPG     0x58    flush memory TLB-entry
- * FLS     0x59    flush cacheline
+ * FPG     0x56    flush memory TLB-entry
+ * FLS     0x57    flush cacheline
  */
 #define V0_HLT 0x50
 #define V0_RST 0x51
@@ -255,10 +296,9 @@
 #define V0_STI 0x53
 #define V0_INT 0x54
 #define V0_SLP 0x55
-#define V0_WFE 0x56
-#define V0_SEV 0x57
-#define V0_FPG 0x38
-#define V0_FLS 0x59
+/* V0_VIRTMEM extensions */
+#define V0_FPG 0x56
+#define V0_FLS 0x57
 
 #endif /* __V0_VM_ISA_H__ */
 

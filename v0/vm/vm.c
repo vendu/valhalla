@@ -197,7 +197,15 @@ v0loop(struct v0 *vm, v0ureg pc)
             v0entry(lea);
             v0entry(clz);
             v0entry(ham);
-            v0entry(swp);
+            v0entry(bsw);
+            v0entry(bts);
+            v0entry(btc);
+            v0entry(ldr);
+            v0entry(str);
+            v0entry(rsr);
+            v0entry(wsr);
+            v0entry(ldl);
+            v0entry(stc);
             v0entry(jmp);
             v0entry(beq);
             v0entry(bne);
@@ -214,22 +222,20 @@ v0loop(struct v0 *vm, v0ureg pc)
             v0entry(srt);
             v0entry(thr);
             v0entry(thx);
-            v0entry(ldr);
-            v0entry(str);
-            v0entry(rsr);
-            v0entry(wsr);
             v0entry(psh);
             v0entry(psm);
             v0entry(pop);
             v0entry(pom);
+            v0entry(cpf);
             v0entry(bar);
             v0entry(brd);
             v0entry(bwr);
-            v0entry(cpf);
+            v0entry(wfe);
+            v0entry(sev);
+#if 0
             v0entry(clk);
             v0entry(clr);
-            v0entry(ldl);
-            v0entry(stc);
+#endif
             v0entry(icd);
             v0entry(imm);
             v0entry(ird);
@@ -240,8 +246,6 @@ v0loop(struct v0 *vm, v0ureg pc)
             v0entry(sti);
             v0entry(int);
             v0entry(slp);
-            v0entry(wfe);
-            v0entry(sev);
             v0entry(fpg);
             v0entry(fls);
         }
