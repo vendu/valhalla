@@ -14,8 +14,8 @@
  * Argument Descriptions
  * ---------------------
  * r    register                vm->regs[op->reg]
- * i	immediate               op->val
- * d    direct                  op->arg[0].i32 etc.
+ * i	immediate               op->arg[0].i32 etc.
+ * d    direct                  vm->regs[op->reg]
  * m    memory [address]	v0getarg1(vm, op), v0getarg2(vm, op)
  *
  * Instruction Prefixes
@@ -36,9 +36,10 @@
 #define V0_NOP     0xff
 
 /* addressing modes */
-#define V0_IMM_ADR 0 // $val, address in val-field
-#define V0_DIR_ADR 1 // $val, address follows opcode
-#define V0_NDX_ADR 2 // reg[ndx << op->parm], ndx follows opcode
+/* register addressing is detected with (op->reg) */
+#define V0_IMM_ADR 0 // operand follows opcode, e.g. op->arg[0].i32
+#define V0_DIR_ADR 1 // address follows opcode, op->arg[0].adr
+#define V0_NDX_ADR 2 // reg[ndx << op->parm], ndx is val or follows opcode
 #define V0_PIC_ADR 3 // pc[ndx << op->parm], ndx is val or follows opcode
 
 /*

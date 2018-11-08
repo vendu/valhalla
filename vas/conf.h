@@ -3,7 +3,7 @@
 #ifndef __VAS_CONF_H__
 #define __VAS_CONF_H__
 
-#define VASDEBUG         0
+#define VASDEBUG         1
 #define VASBUF           0
 #define VASMMAP          1
 #define V0               1

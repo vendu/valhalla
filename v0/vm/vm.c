@@ -28,6 +28,7 @@ static long long        v0speedcnt;
 static struct v0opinfo  v0opinfotab[V0_NINST_MAX];
 #endif
 char                   *v0opnametab[V0_NINST_MAX];
+static _V0OPTAB_T       v0jmptab[V0_NINST_MAX];
 
 void
 v0printop(struct v0op *op)
@@ -162,18 +163,16 @@ v0init(struct v0 *vm)
 int
 v0loop(struct v0 *vm, v0ureg pc)
 {
-    static _V0OPTAB_T  jmptab[V0_MAX_INSTS];
-    struct v0op       *op = v0adrtoptr(vm, pc);
+    //    static _V0OPTAB_T  jmptab[V0_MAX_INSTS];
+    struct v0op *op = v0adrtoptr(vm, pc);
 
-    v0initops(jmptab);
-
-#if defined(__GNUC__)
+#if defined(__GNUC__) && 0
     do {
         v0reg code = op->code;
 
-        goto *jmptab[code];
+        goto *(v0jmptab[code]);
 
-        {
+        if (init) {
             v0entry(nop);
             v0entry(not);
             v0entry(and);
@@ -256,7 +255,7 @@ v0loop(struct v0 *vm, v0ureg pc)
     while (v0opisvalid(vm, op)) {
         struct v0op *op = v0adrtoptr(vm, pc);
         uint8_t      code = op->code;
-        v0opfunc    *func = jmptab[code];
+        v0opfunc    *func = v0jmptab[code];
 
         pc = func(vm, pc);
     }
@@ -282,7 +281,7 @@ main(int argc, char *argv[])
 
     if (vm) {
         v0getopt(vm, argc, argv);
-        //        v0initops();
+        v0initops(v0jmptab);
         vasinit();
         for (ndx = 1 ; ndx < argc ; ndx++) {
 #if (VASBUF) && !(VASMMAP)

@@ -169,7 +169,7 @@ union v0oparg {
 #define V0_TRAP_BIT      0x01 // breakpoint
 #define V0_AUX_BIT       0x04 // reserved for per-instruction flags
 /* val-field */
-#define V0_IMM_VAL_MAX   0xff
+#define V0_IMM_VAL_MAX   0x7f
 #define V0_IMM_VAL_MIN   (-0x7f - 1)
 
 /* NOP is declared as all 1-bits */
