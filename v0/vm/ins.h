@@ -5,6 +5,8 @@
 /*
  * - the shortest instructions (2 register operands, no special functionality)
  *   are 16-bit
+ *   - the high bit (0x80) of the opcode is used to denote there's another 16-
+ *     bit instruction parcel to follow
  * - instructions are always fetched as 64-bit or 32-bit chunks
  * - immediate operands following 32-bit instructions are always 32-bit
  */

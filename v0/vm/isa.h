@@ -43,7 +43,7 @@
  * -----
  * - reciprocals as well as results are stored in [64-bit] registers
  * - division is done by computing a reciprocal and multiplying the dividend
- *   with it EDIT: IF feasible... This needs to be done with floating-point
+ *   with it EDIT: IF feasible... This may need to be done with floating-point
  *   operations.
  *
  * Instructions
@@ -71,7 +71,7 @@
  * MUL   0x12    multiplication, returns low word
  * MLU   0x13    unsigned multiplication, returns low word
  * MLH   0x14    multiplication, returns high word
- * MLU   0x15    unsigned multiplication, returns high word
+ * MHU   0x15    unsigned multiplication, returns high word
  * DIV   0x16    division
  * DVU   0x17    unsigned division
  * SEX	 0x18    sign-extend operand to given size
