@@ -14,8 +14,8 @@
  * - out32      32-bit output word
  */
 /* signal-bits */
-#define V0_MRDLK_SIG 0x01       // memory is read-clocked when 1
-#define V0_MWRLK_SIG 0x02       // memory is write-clocked when 1
+#define V0_MRDLK_SIG 0x01       // memory is read-locked when 1
+#define V0_MWRLK_SIG 0x02       // memory is write-locked when 1
 #define V0_MEMLK_SIG 0x03       // memory is read-write-locked when 1
 #define V0_BUSLK_SIG 0x40       // memory and data buses are locked when 1
 #define V0_RESET_SIG 0x80       // reset is signaled by 1
@@ -51,24 +51,22 @@
 /*
  * Buses
  * -----
- * data         access and synchronisation of processor registers
  * mem          access and synchronisation of cache and random-access memory
  * map          access and control of memory-mapped devices
- * io           peripherals accessed with I/O-ports
  */
 /*
  * Special Constant Registers
  * --------------------------
  */
-#define V0_CONST_ONE     0x00000001 // constant one
-#define V0_CONST_HAM_33  0x33333333 // mask for ham
-#define V0_CONST_HAM_55  0x55555555 // mask for ham
-#define V0_CONST_HAM_0F  0x0f0f0f0f // mask for ham
-#define V0_CONST_HAM_FF  0x00ff00ff // mask for ham
-#define V0_CONST_LOW_16  0x0000ffff // low 16-bit mask of all 1-bits
-#define V0_CONST_HIGH_16 0xffff0000 // high 16-bit mask of all 1-bits (clz)
-#define V0_CONST_ALL_32  0xffffffff // 32-bit mask of all 1-bits (mul/muh)
-#define V0_CONST_SIGN_32 0x80000000 // sign-bit
+#define V0_CONST_ONE      0x00000001 // constant one
+#define V0_CONST_HAM_33   0x33333333 // mask for ham
+#define V0_CONST_HAM_55   0x55555555 // mask for ham
+#define V0_CONST_HAM_0F   0x0f0f0f0f // mask for ham
+#define V0_CONST_HAM_00FF 0x00ff00ff // mask for ham
+#define V0_CONST_LOW_16   0x0000ffff // low 16-bit mask of all 1-bits
+#define V0_CONST_HIGH_16  0xffff0000 // high 16-bit mask of all 1-bits (clz)
+#define V0_CONST_ALL_32   0xffffffff // 32-bit mask of all 1-bits (mul/muh)
+#define V0_CONST_SIGN_32  0x80000000 // sign-bit
 
 /*
  * V0 Operations
@@ -403,7 +401,7 @@
         (_res32) = (((_res32) >> 1) & V0_CONST_HAM_55) + ((_res32) & V0_CONST_HAM_55); \
         (_res32) = (((_res32) >> 2) & V0_CONST_HAM_33) + ((_res32) & V0_CONST_HAM_33); \
         (_res32) = (((_res32) >> 4) & V0_CONST_HAM_0F) + ((_res32) & V0_CONST_HAM_0F); \
-        (_res32) = (((_res32) >> 8) & V0_CONST_HAM_FF) + ((_res32) & V0_CONST_HAM_FF); \
+        (_res32) = (((_res32) >> 8) & V0_CONST_HAM_00FF) + ((_res32) & V0_CONST_HAM_00FF); \
         (out32) = ((_res32) >> 16) + ((_res32) & V0_CONST_LOW_16);      \
     } while (0)
 
@@ -421,7 +419,7 @@
     do {                                                                \
         v0reg _tmp32 = (src32);                                         \
         v0reg _sign = (8 << (sft)) - 1;                                 \
-        v0reg _sign32 = 0;;                                             \
+        v0reg _sign32 = 0;                                              \
         v0reg _clz32;                                                   \
         v0reg _cnt32;                                                   \
                                                                         \

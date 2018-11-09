@@ -55,9 +55,11 @@
  * AND   0x02    logical AND
  * IOR   0x03    logical inclusive OR
  * XOR   0x04    logical exclusive OR
+ *
  * SHL   0x05    shift left logical
  * SHR   0x06    shift right logical (fill with zero)
  * SAR   0x07    shift right arithmetic (fill with sign-bit)
+ *
  * INC	 0x08    increment by one
  * DEC   0x09    decrement by one
  * ADD   0x0a    addition (ignore over- and underflows)
@@ -67,6 +69,7 @@
  * SBU   0x0e    unsigned subtraction
  * SBC   0x0f    subtract with carry-flag
  * CMP   0x10    compare (subtract + set MSW-flags)
+ *
  * CRP   0x11    calculate reciprocal
  * MUL   0x12    multiplication, returns low word
  * MLU   0x13    unsigned multiplication, returns low word
@@ -74,29 +77,40 @@
  * MHU   0x15    unsigned multiplication, returns high word
  * DIV   0x16    division
  * DVU   0x17    unsigned division
+ *
  * SEX	 0x18    sign-extend operand to given size
  * ZEX   0x19    zero-extend operand to given size
+ *
  * LEA   0x1a    load effective address
- * CLZ	 0x1b    compute Hamming weight/bit population (count of 1-bits)
- * HAM   0x1c    count leading zero bits
+ *
+ * CLZ	 0x1b    count leading zero bits
+ *
+ * HAM   0x1c    compute Hamming weight/bit population (number of 1-bits)
+ *
  * BSW   0x1d    swap byte-order
+ *
  * LDR   0x1e    load value into register
  * STR   0x1f    store register into memory
  * RSR   0x20    read system register
  * WSR   0x21    write system register
+ *
  * BTS   0x22    test and set bit; return original value in ZF-bit
  * BTC   0x23    test and clear bit; return original value in ZF-bit
  * CAS   0x24    compare and swap; return original value in register val
+ *
  * LDL   0x25    load linked
  * STC   0x26    store conditional (if unmodified)
  */
+/* logical instructions */
 #define V0_NOT 0x01
 #define V0_AND 0x02
 #define V0_IOR 0x03
 #define V0_XOR 0x04
+/* shifter instructions */
 #define V0_SHL 0x05
 #define V0_SHR 0x06
 #define V0_SAR 0x07
+/* adder instructions */
 #define V0_INC 0x08 // V0_ATOM_BIT
 #define V0_DEC 0x09 // V0_ATOM_BIT
 #define V0_ADD 0x0a // V0_ATOM_BIT
