@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <endian.h>
 #include <valhalla/cdefs.h>
+#include <v0/vm/ins.h>
 
 struct v0;
 
@@ -22,18 +23,6 @@ struct v0iofuncs {
     v0iofunc_t *rdfunc;
     v0iofunc_t *wrfunc;
 };
-
-#if (__BYTE_ORDER == __LITTLE_ENDIAN)
-#define v0setloval(op, val)                                             \
-    ((op)->val = ((op)->val & 0x3e) | (val))
-#define v0sethival(op, val)                                             \
-    ((op)->val = ((op)->val & 0x1f) | ((val) << 5))
-#else
-#define v0setloval(op, val)                                             \
-    ((op)->val = ((op)->val & 0x1f) | ((val) << 5))
-#define v0sethival(op, val)                                             \
-    ((op)->val = ((op)->val & 0x3e) | (val))
-#endif
 
 #define V0_RET_REG       V0_R0_REG
 #define V0_AC_REG        V0_R6_REG
@@ -124,74 +113,8 @@ struct v0 {
     struct divuf16   *divu16tab;
 };
 
-/* OPCODES */
-
-/*
- * 32-bit little-endian argument parcel
- * - declared as union for 32-bit alignment of all arguments
- */
-union v0oparg {
-    v0ureg   adr;
-    v0ureg   uval;
-    v0reg    val;
-    v0reg    ofs;
-    int32_t  i32;
-    uint32_t u32;
-    int16_t  i16;
-    uint16_t u16;
-    int8_t   i8;
-    uint8_t  u8;
-};
-
-#if (__BYTE_ORDER == __LITTLE_ENDIAN)
-#define v0mkopid(unit, inst) ((uint8_t)((unit) | ((inst) << 4)))
-#define v0getunit(code)      ((code) & 0x0f)
-#define v0getinst(code)      ((code) >> 4)
-#else
-#define v0mkopid(unit, inst) ((uint8_t)(((unit) << 4) | (inst)))
-#define v0getunit(code)      ((code) >> 4)
-#define v0getop(code)        ((code) & 0x0f)
-#endif
 #define v0adrtoptr(vm, adr)  ((void *)(&(vm)->mem[(adr)]))
 #define v0regtoptr(vm, reg)  ((void *)(&(vm)->regs[(reg)]))
-
-#define V0_DIR_BIT       (1 << V0_DIR_ADR)
-#define V0_IMM_BIT       (1 << V0_IMM_ADR)
-#define V0_NDX_BIT       (1 << V0_NDX_ADR)
-#define V0_R_ARG         V0_REG_BIT
-#define V0_I_ARG         (V0_IMM_BIT | V0_DIR_BIT)
-#define V0_M_ARG         V0_NDX_BIT
-#define V0_RI_ARG        (V0_R_ARG | V0_I_ARG)
-#define V0_RIM_ARG       (V0_R_ARG | V0_I_ARG | V0_M_ARG)
-#define V0_RM_ARG        (V0_R_ARG | V0_M_ARG)
-
-/* parm-field */
-#define V0_TRAP_BIT      0x01 // breakpoint
-#define V0_AUX_BIT       0x04 // reserved for per-instruction flags
-/* val-field */
-#define V0_IMM_VAL_MAX   0x7f
-#define V0_IMM_VAL_MIN   (-0x7f - 1)
-
-/* NOP is declared as all 1-bits */
-#define V0_NOP_CODE      (~UINT32_C(0))
-#define v0opisnop(op)    (*(uint32_t *)(op) == V0_NOP_CODE)
-#define V0_SIGNED_BIT    (1 << 3)
-#define v0opissigned(op) ((op)->parm & V0_SIGNED_BIT)
-
-/* attributes for the flg-field */
-#define V0_BUSLK_BIT     (1 << 3) // lock bus/cacheline for operation
-#define V0_PICADR_BIT    (1 << 2) // address is relative to PC
-/* I/O-operations always have a single register argument */
-struct v0op {
-    unsigned int   code : 8; // unit and instruction IDs
-    unsigned int   reg1 : 4; // register argument #1 ID
-    unsigned int   reg2 : 4; // register argument #2 ID
-    unsigned int   adr  : 2; // addressing mode
-    unsigned int   parm : 2; // address scale shift count
-    unsigned int   flg  : 4; // instruction flags
-    unsigned int   val  : 8; // immediate value; shift count, register range
-    union v0oparg  arg[VLA]; // possible argument value
-};
 
 /* memory parameters */
 #define V0_MEM_TRAP      0x00   // traditionally, interrupt-vector @ 0x00000000
@@ -247,10 +170,9 @@ struct v0op {
 #define V0_INV_MEM_ADR   0x13 // invalid memory address; segment violation
 /* instruction-related problems */
 /* instruction format violations - terminate process */
-#define V0_INV_OP_CODE   0x20 // invalid operation; code
-#define V0_INV_OP_ARG    0x21 // invalid argument; (type << 1) | num
-#define V0_INV_OP_ADR    0x22 // invalid addressing-mode for instruction
-#define V0_INV_OP_
+#define V0_INV_INS_CODE  0x20 // invalid instruction; code
+#define V0_INV_INS_ARG   0x21 // invalid argument; (type << 1) | num
+#define V0_INV_INS_ADR   0x22 // invalid addressing-mode for instruction
 /* I/O-related exceptions */
 #define V0_IO_TRAP       0x20 // I/O traps
 #define V0_INV_IO_READ   0x20 // no permission to read from input port; port
@@ -261,14 +183,14 @@ struct v0op {
 
 /* debugging */
 
-struct v0opinfo {
+struct v0insinfo {
     char *unit;
     char *op;
     char *func;
 };
 
 struct v0 * v0init(struct v0 *vm);
-void        v0disasm(struct v0 *vm, struct v0op *op, v0ureg pc);
+void        v0disasm(struct v0 *vm, struct v0ins *ins, v0ureg pc);
 
 #endif /* __V0_VM_VM_H__ */
 

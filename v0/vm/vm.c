@@ -15,20 +15,20 @@ extern void   vasinit(void);
 extern long * vasgetinst(char *str);
 extern long   vasaddop(const char *str, uint8_t code, uint8_t narg);
 
-extern struct vasop    *v0optab[256];
-extern char            *vaslinebuf;
-extern long             vasreadbufcur;
-struct v0              *v0vm;
-extern vasuword         _startadr;
-extern vasuword         _startset;
+extern struct vasop     *v0optab[256];
+extern char             *vaslinebuf;
+extern long              vasreadbufcur;
+struct v0               *v0vm;
+extern vasuword          _startadr;
+extern vasuword          _startset;
 #if defined(V0_GAME)
-static long long        v0speedcnt;
+static long long         v0speedcnt;
 #endif
 #if defined(V0_DEBUG_TABS)
-static struct v0opinfo  v0opinfotab[V0_NINST_MAX];
+static struct v0insinfo  v0insinfotab[V0_NINST_MAX];
 #endif
-char                   *v0opnametab[V0_NINST_MAX];
-static _V0OPTAB_T       v0jmptab[V0_NINST_MAX];
+char                    *v0opnametab[V0_NINST_MAX];
+static _V0OPTAB_T        v0jmptab[V0_NINST_MAX];
 
 void
 v0printop(struct v0op *op)

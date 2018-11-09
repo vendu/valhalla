@@ -1,5 +1,5 @@
-#ifndef __V0_VM_OP_H__
-#define __V0_VM_OP_H__
+#ifndef __V0_VM_INS_H__
+#define __V0_VM_INS_H__
 
 /* FIXME: make this file work */
 
@@ -15,33 +15,34 @@
 #include <valhalla/param.h>
 #include <valhalla/util.h>
 #include <v0/vm/isa.h>
+#include <v0/vm/ins.h>
 #include <v0/vm/vm.h>
 #include <vas/vas.h>
 
 #define V0_HALTED                       0xffffffffU // special PC-value
-#define V0_OP_INVAL                     NULL
+#define V0_INS_INVAL                     NULL
 #define V0_ADR_INVAL                    0x00000000
 #define V0_CNT_INVAL                    (-1)
 #if !defined(__GNUC__) || !0
-#define _V0OPFUNC_T __inline__ uint32_t
+#define _V0INSFUNC_T __inline__ uint32_t
 #else
-#define _V0OPFUNC_T static __inline__ uint32_t
+#define _V0INSFUNC_T static __inline__ uint32_t
 #endif
 
 #if defined(__GNUC__) && 0
 #define v0entry(x)                                                      \
-    v0op##x:                                                            \
-        pc = v0##x(vm, pc);                                             \
-        opjmp(vm, pc)
-#define _v0opadr(x) &&v0op##x
-#define _V0OPTAB_T  void *
+    v0ins##x:                                                           \
+    pc = v0##x(vm, pc);                                                 \
+    insjmp(vm, pc)
+#define _v0insadr(x) &&v0ins##x
+#define _V0INSTAB_T  void *
 #else
-#define _v0opadr(x) v0##x
-typedef v0reg       v0opfunc(struct v0 *vm, v0ureg pc);
-#define _V0OPTAB_T  v0opfunc *
+#define _v0insadr(x) v0##x
+typedef v0reg       v0insfunc(struct v0 *vm, v0ureg pc);
+#define _V0INSTAB_T  v0insfunc *
 #endif
 
-extern char     *v0opnametab[V0_NINST_MAX];
+extern char     *v0insnametab[V0_NINST_MAX];
 extern vasuword  _startadr;
 
 #define v0doxcpt(xcpt)                                                  \
@@ -57,32 +58,32 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 }
 
 #if defined(V0_DEBUG_TABS) && 0
-#define opaddinfo(proc, inst, handler)                                  \
+#define insaddinfo(proc, inst, handler)                                 \
     do {                                                                \
-        long _code = v0mkopid(proc, inst);                              \
+        long _code = v0mkinsid(proc, inst);                             \
                                                                         \
-        v0opinfotab[_code].unit = strdup(#proc);                        \
-        v0opinfotab[_code].op = strdup(#inst);                          \
-        v0opinfotab[_code].func = strdup(#handler);                     \
+        v0insinfotab[_code].unit = strdup(#proc);                       \
+        v0insinfotab[_code].ins = strdup(#inst);                        \
+        v0insinfotab[_code].func = strdup(#handler);                    \
     } while (0)
 #else
-#define opaddinfo(unit, op)
+#define insaddinfo(unit, ins)
 #endif
 
-#define v0traceop(vm, op, pc) v0disasm(vm, op, pc);
-#define v0opisvalid(vm, pc) (vm)
+#define v0traceins(vm, ins, pc) v0disasm(vm, ins, pc);
+#define v0insisvalid(vm, pc) (vm)
 #if defined(__GNUC__) && 0
-#define opjmp(vm, pc)                                                   \
+#define insjmp(vm, pc)                                                  \
     do {								\
-        struct v0op *_op = v0adrtoptr(vm, pc);				\
+        struct v0ins *_ins = v0adrtoptr(vm, pc);                        \
                                                                         \
         if (pc == V0_HALTED) {                                          \
                                                                         \
             exit(1);                                                    \
         }                                                               \
-	if (v0opisvalid(_op, pc)) {					\
-            v0disasm(vm, _op, pc);                                      \
-	    goto *(v0jmptab[(_op)->code]);                              \
+	if (v0insisvalid(_ins, pc)) {					\
+            v0disasm(vm, _ins, pc);                                     \
+	    goto *(v0jmptab[(_ins)->code]);                             \
 	} else {							\
 	    v0doxcpt(V0_TEXT_FAULT);					\
 	  								\
@@ -90,20 +91,20 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 	}								\
     } while (0)
 #if 0
-#define opjmp(vm, pc)                                                   \
+#define insjmp(vm, pc)                                                  \
     do {								\
-        struct v0op *_op = v0adrtoptr(vm, pc);				\
+        struct v0ins *_ins = v0adrtoptr(vm, pc);                       \
 									\
-	while (v0opisnop(_op)) {					\
-	    (pc) += sizeof(struct v0op);				\
+	while (v0insisnins(_ins)) {					\
+	    (pc) += sizeof(struct v0ins);				\
 	}								\
-	if (v0opisvalid(_op, pc)) {					\
-	    if (_op->adr == V0_DIR_ADR || _op->adr == V0_NDX_ADR) {     \
-                (pc) += sizeof(struct v0op) + sizeof(union v0oparg);	\
+	if (v0insisvalid(_ins, pc)) {					\
+	    if (_ins->adr == V0_DIR_ADR || _ins->adr == V0_NDX_ADR) {   \
+                (pc) += sizeof(struct v0ins) + sizeof(union v0insarg);	\
 	    } else {							\
-                (pc) += sizeof(struct v0op);				\
+                (pc) += sizeof(struct v0ins);				\
 	    }								\
-	    goto *(v0jmptab[(_op)->code]);                              \
+	    goto *(v0jmptab[(_ins)->code]);                             \
 	    vm->regs[V0_PC_REG] = (pc);					\
 	} else {							\
 	    v0doxcpt(V0_TEXT_FAULT);					\
@@ -113,134 +114,109 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
     } while (0)
 #endif
 #endif /* defined(__GNUC__) */
-#define v0addop(op, str, narg)                                          \
-    (vasaddop(#str, op, narg))
-#define v0setop(op, str, narg, tab)                                     \
-    (v0opnametab[(op)] = #str,                                          \
-     vasaddop(#str, op, narg),                                          \
-     ((_V0OPTAB_T *)(tab))[(op)] = _v0opadr(str))
+#define v0addins(ins, str, narg)                                        \
+    (vasaddins(#str, ins, narg))
+#define v0setins(ins, str, narg, tab)                                   \
+    (v0insnametab[(ins)] = #str,                                        \
+     vasaddins(#str, ins, narg),                                        \
+     ((_V0INSTAB_T *)(tab))[(ins)] = _v0insadr(str))
 
-#define v0setopbits(op, bits1, bits2, tab)                              \
-    ((tab)[(op)] = (bits1) | ((bits2 << 16)))
-#define v0getopbits1(op, tab) ((tab)[(op)] & 0xffff)
-#define v0getopbits2(op, tab) (((tab)[(op)] >> 16) & 0xffff)
+#define v0setinsbits(ins, bits1, bits2, tab)                            \
+    ((tab)[(ins)] = (bits1) | ((bits2 << 16)))
+#define v0getinsbits1(ins, tab) ((tab)[(ins)] & 0xffff)
+#define v0getinsbits2(ins, tab) (((tab)[(ins)] >> 16) & 0xffff)
 
-#define v0initopbits(tab)                                               \
+#define v0initinsbits(tab)                                              \
     do {                                                                \
         ;                                                               \
     } while (0)
 
-#define v0initops(tab)                                                  \
+#define v0initinss(tab)                                                 \
     do {                                                                \
-        v0setop(V0_NOP, nop, 0, tab);                                   \
-        v0setop(V0_NOT, not, 1, tab);                                   \
-        v0setop(V0_AND, and, 2, tab);                                   \
-        v0setop(V0_IOR, ior, 2, tab);                                   \
-        v0setop(V0_XOR, xor, 2, tab);                                   \
-        v0setop(V0_SHL, shl, 2, tab);                                   \
-        v0setop(V0_SHR, shr, 2, tab);                                   \
-        v0setop(V0_SAR, sar, 2, tab);                                   \
-        v0setop(V0_INC, inc, 1, tab);                                   \
-        v0setop(V0_DEC, dec, 1, tab);                                   \
-        v0setop(V0_ADD, add, 2, tab);                                   \
-        v0setop(V0_ADC, adc, 2, tab);                                   \
-        v0setop(V0_SUB, sub, 2, tab);                                   \
-        v0setop(V0_SBC, sbc, 2, tab);                                   \
-        v0setop(V0_CMP, cmp, 2, tab);                                   \
-        v0setop(V0_CRP, crp, 1, tab);                                   \
-        v0setop(V0_MUL, mul, 2, tab);                                   \
-        v0setop(V0_MUL, muh, 2, tab);                                   \
-        v0setop(V0_DIV, div, 2, tab);                                   \
-        v0setop(V0_SEX, sex, 2, tab);                                   \
-        v0setop(V0_LEA, lea, 2, tab);                                   \
-        v0setop(V0_CLZ, clz, 2, tab);                                   \
-        v0setop(V0_HAM, ham, 2, tab);                                   \
-        v0setop(V0_BSW, bsw, 2, tab);                                   \
-        v0setop(V0_BTS, bts, 2, tab);                                   \
-        v0setop(V0_BTC, btc, 2, tab);                                   \
-        v0setop(V0_LDR, ldr, 2, tab);                                   \
-        v0setop(V0_STR, str, 2, tab);                                   \
-        v0setop(V0_RSR, rsr, 2, tab);                                   \
-        v0setop(V0_WSR, wsr, 2, tab);                                   \
-        v0setop(V0_PSH, psh, 1, tab);                                   \
-        v0setop(V0_PSM, psm, 1, tab);                                   \
-        v0setop(V0_POP, pop, 1, tab);                                   \
-        v0setop(V0_POM, pom, 1, tab);                                   \
-        v0setop(V0_JMP, jmp, 1, tab);                                   \
-        v0setop(V0_BEQ, beq, 1, tab);                                   \
-        v0setop(V0_BNE, bne, 1, tab);                                   \
-        v0setop(V0_BLT, blt, 1, tab);                                   \
-        v0setop(V0_BUL, bul, 1, tab);                                   \
-        v0setop(V0_BGT, bgt, 1, tab);                                   \
-        v0setop(V0_BUG, bug, 1, tab);                                   \
-        v0setop(V0_CSR, csr, 1, tab);                                   \
-        v0setop(V0_BEG, beg, 2, tab);                                   \
-        v0setop(V0_FIN, fin, 2, tab);                                   \
-        v0setop(V0_RET, ret, 1, tab);                                   \
-        v0setop(V0_SYS, sys, 2, tab);                                   \
-        v0setop(V0_SRT, srt, 2, tab);                                   \
-        v0setop(V0_THR, thr, 1, tab);                                   \
-        v0setop(V0_THX, thx, 2, tab);                                   \
-        v0setop(V0_ICD, icd, 2, tab);                                   \
-        v0setop(V0_IMM, imm, 2, tab);                                   \
-        v0setop(V0_IRD, ird, 2, tab);                                   \
-        v0setop(V0_IWR, iwr, 2, tab);                                   \
-        v0setop(V0_HLT, hlt, 0, tab);                                   \
-        v0setop(V0_RST, rst, 0, tab);                                   \
-        v0setop(V0_CLI, cli, 1, tab);                                   \
-        v0setop(V0_STI, sti, 1, tab);                                   \
-        v0setop(V0_SLP, slp, 0, tab);                                   \
-        v0setop(V0_WFE, wfe, 1, tab);                                   \
-        v0setop(V0_SEV, sev, 1, tab);                                   \
-        v0setop(V0_FPG, cli, 1, tab);                                   \
-        v0setop(V0_FLS, sti, 1, tab);                                   \
+        v0setins(V0_NINS, nins, 0, tab);                                \
+        v0setins(V0_NOT, not, 1, tab);                                  \
+        v0setins(V0_AND, and, 2, tab);                                  \
+        v0setins(V0_IOR, ior, 2, tab);                                  \
+        v0setins(V0_XOR, xor, 2, tab);                                  \
+        v0setins(V0_SHL, shl, 2, tab);                                  \
+        v0setins(V0_SHR, shr, 2, tab);                                  \
+        v0setins(V0_SAR, sar, 2, tab);                                  \
+        v0setins(V0_INC, inc, 1, tab);                                  \
+        v0setins(V0_DEC, dec, 1, tab);                                  \
+        v0setins(V0_ADD, add, 2, tab);                                  \
+        v0setins(V0_ADC, adc, 2, tab);                                  \
+        v0setins(V0_SUB, sub, 2, tab);                                  \
+        v0setins(V0_SBC, sbc, 2, tab);                                  \
+        v0setins(V0_CMP, cmp, 2, tab);                                  \
+        v0setins(V0_CRP, crp, 1, tab);                                  \
+        v0setins(V0_MUL, mul, 2, tab);                                  \
+        v0setins(V0_MUL, muh, 2, tab);                                  \
+        v0setins(V0_DIV, div, 2, tab);                                  \
+        v0setins(V0_SEX, sex, 2, tab);                                  \
+        v0setins(V0_LEA, lea, 2, tab);                                  \
+        v0setins(V0_CLZ, clz, 2, tab);                                  \
+        v0setins(V0_HAM, ham, 2, tab);                                  \
+        v0setins(V0_BSW, bsw, 2, tab);                                  \
+        v0setins(V0_BTS, bts, 2, tab);                                  \
+        v0setins(V0_BTC, btc, 2, tab);                                  \
+        v0setins(V0_LDR, ldr, 2, tab);                                  \
+        v0setins(V0_STR, str, 2, tab);                                  \
+        v0setins(V0_RSR, rsr, 2, tab);                                  \
+        v0setins(V0_WSR, wsr, 2, tab);                                  \
+        v0setins(V0_PSH, psh, 1, tab);                                  \
+        v0setins(V0_PSM, psm, 1, tab);                                  \
+        v0setins(V0_PINS, pins, 1, tab);                                \
+        v0setins(V0_POM, pom, 1, tab);                                  \
+        v0setins(V0_JMP, jmp, 1, tab);                                  \
+        v0setins(V0_BEQ, beq, 1, tab);                                  \
+        v0setins(V0_BNE, bne, 1, tab);                                  \
+        v0setins(V0_BLT, blt, 1, tab);                                  \
+        v0setins(V0_BUL, bul, 1, tab);                                  \
+        v0setins(V0_BGT, bgt, 1, tab);                                  \
+        v0setins(V0_BUG, bug, 1, tab);                                  \
+        v0setins(V0_CSR, csr, 1, tab);                                  \
+        v0setins(V0_BEG, beg, 2, tab);                                  \
+        v0setins(V0_FIN, fin, 2, tab);                                  \
+        v0setins(V0_RET, ret, 1, tab);                                  \
+        v0setins(V0_SYS, sys, 2, tab);                                  \
+        v0setins(V0_SRT, srt, 2, tab);                                  \
+        v0setins(V0_THR, thr, 1, tab);                                  \
+        v0setins(V0_THX, thx, 2, tab);                                  \
+        v0setins(V0_ICD, icd, 2, tab);                                  \
+        v0setins(V0_IMM, imm, 2, tab);                                  \
+        v0setins(V0_IRD, ird, 2, tab);                                  \
+        v0setins(V0_IWR, iwr, 2, tab);                                  \
+        v0setins(V0_HLT, hlt, 0, tab);                                  \
+        v0setins(V0_RST, rst, 0, tab);                                  \
+        v0setins(V0_CLI, cli, 1, tab);                                  \
+        v0setins(V0_STI, sti, 1, tab);                                  \
+        v0setins(V0_SLP, slp, 0, tab);                                  \
+        v0setins(V0_WFE, wfe, 1, tab);                                  \
+        v0setins(V0_SEV, sev, 1, tab);                                  \
+        v0setins(V0_FPG, cli, 1, tab);                                  \
+        v0setins(V0_FLS, sti, 1, tab);                                  \
     } while (0)
 
-#define v0getadr(vm, op, num)                                           \
-    (((op)->reg##num)                                                   \
-     ? (void *)(&(vm)->mem[(vm)->regs[(op)->reg##num]])                 \
-     : (((op)->adr == V0_IMM_ADR)                                       \
-        ? (void *)(&(vm)->mem[(op)->arg[0].i32])                        \
-        : (((op)->adr == V0_DIR_ADR)                                    \
-           ? (void *)(&(vm)->mem[(op)->arg[0].adr])                     \
-           : (void *)(&(vm)->mem[_v0calcadr((vm)->regs[(op)->reg##num], (op))]))))
-#define v0getarg1(vm, op, type) (*(type *)v0getadr(vm, op, 1))
-#define v0getarg2(vm, op, type) (*(type *)v0getadr(vm, op, 2))
-#define v0getjmpofs(vm, op)                                             \
-    (((op)->adr == V0_PIC_ADR)                                          \
-     ? (vm)->mem[_v0calcjmpofs((vm)->regs[V0_PC_REG], op)]              \
-     : (((op)->reg1)                                                    \
-        ? (vm)->mem[(vm)->regs[(op)->reg1]]                             \
-        : (((op)->adr == V0_IMM_ADR)                                    \
-           ? (vm)->mem[(op)->arg[0].ofs]                                \
-           : (((op)->adr == V0_DIR_ADR)                                 \
-              ? (vm)->mem[(op)->arg[0].adr]                             \
-              : (vm)->mem[_v0calcadr((op)->reg1, (op))]))))
-#define _v0calcadr(reg, op)                                             \
-    ((reg) + ((op)->arg[0].ofs << ((op)->parm)))
-#define _v0calcjmpofs(reg, op)                                          \
-    ((reg) + (((op)->val) ? ((op)->val << 2) : ((op)->arg[0].ofs << 2)))
-
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0nop(struct v0 *vm, v0ureg pc)
 {
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0not(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *sptr = v0getadr(vm, op, 1);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *sptr = v0getadr(vm, ins, 1);
     v0reg        src = *sptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     src = ~src;
     vm->regs[V0_PC_REG] = pc;
@@ -249,18 +225,18 @@ v0not(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0and(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest &= src;
     vm->regs[V0_PC_REG] = pc;
@@ -269,18 +245,18 @@ v0and(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0ior(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest |= src;
     vm->regs[V0_PC_REG] = pc;
@@ -289,18 +265,18 @@ v0ior(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0xor(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest ^= src;
     vm->regs[V0_PC_REG] = pc;
@@ -309,18 +285,18 @@ v0xor(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0shl(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest <<= src;
     vm->regs[V0_PC_REG] = pc;
@@ -329,19 +305,19 @@ v0shl(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0shr(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
     v0reg        fill = ~((v0reg)0) >> src;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest >>= src;
     dest &= fill;
@@ -351,12 +327,12 @@ v0shr(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0sar(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
     v0reg        mask = ~(v0reg)0;
 #if (V0_WORD_SIZE == 8)
@@ -371,10 +347,10 @@ v0sar(struct v0 *vm, v0ureg pc)
 
     dest >>= src;
     fill = -fill << (CHAR_BIT * sizeof(v0reg) - src);
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest &= fill;
     vm->regs[V0_PC_REG] = pc;
@@ -383,17 +359,17 @@ v0sar(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0inc(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *sptr = v0getadr(vm, op, 1);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *sptr = v0getadr(vm, ins, 1);
     v0reg        src = *sptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     src++;
     vm->regs[V0_PC_REG] = pc;
@@ -402,17 +378,17 @@ v0inc(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0dec(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *sptr = v0getadr(vm, op, 1);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *sptr = v0getadr(vm, ins, 1);
     v0reg        src = *sptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     src--;
     vm->regs[V0_PC_REG] = pc;
@@ -421,19 +397,19 @@ v0dec(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0add(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
     v0reg        res = src;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     res += dest;
     if (res < dest) {
@@ -446,19 +422,19 @@ v0add(struct v0 *vm, v0ureg pc)
 }
 
 /* FIXME: set carry-bit */
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0adc(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
     v0reg        res = src;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     res += dest;
     if (res < dest) {
@@ -470,18 +446,18 @@ v0adc(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0sub(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest -= src;
     vm->regs[V0_PC_REG] = pc;
@@ -490,18 +466,18 @@ v0sub(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0sbc(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest -= src;
     vm->regs[V0_PC_REG] = pc;
@@ -510,18 +486,18 @@ v0sbc(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0cmp(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    v0reg        src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest -= src;
     v0clrmsw(vm);
@@ -536,27 +512,27 @@ v0cmp(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0crp(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
 #if 0
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0crp(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
-    double      *dptr = (double *)v0getadr(vm, op, 2);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
+    double      *dptr = (double *)v0getadr(vm, ins, 2);
     double       res = 1.0 / src;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     *dptr = res;
 
@@ -564,20 +540,20 @@ v0crp(struct v0 *vm, v0ureg pc)
 }
 #endif
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0mul(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    double       src = (double)v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    double       src = (double)v0getarg1(vm, ins, int32_t);
     double       res = *(double *)dptr;
     v0wreg       dest;
 
     res *= src;
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest = (v0wreg)res;
     vm->regs[V0_PC_REG] = pc;
@@ -587,20 +563,20 @@ v0mul(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0muh(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg       *dptr = v0getadr(vm, op, 2);
-    double       src = (double)v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg       *dptr = v0getadr(vm, ins, 2);
+    double       src = (double)v0getarg1(vm, ins, int32_t);
     double       res = *(double *)dptr;
     v0wreg       dest;
 
     res *= src;
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
     dest = (v0wreg)res;
     vm->regs[V0_PC_REG] = pc;
@@ -610,88 +586,88 @@ v0muh(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0div(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0sex(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0lea(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0clz(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0ham(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bsw(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bts(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0btc(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0ldr(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0reg        reg;
-    v0reg        parm = op->parm;
-    v0reg       *dptr = v0regtoptr(vm, op->reg2);
+    v0reg        parm = ins->parm;
+    v0reg       *dptr = v0regtoptr(vm, ins->reg2);
     v0reg       *sptr = NULL;
     v0reg        src = 0;
     v0reg        mask;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
-    if ((op->reg1)) {
-        reg = op->reg1;
+    if ((ins->reg1)) {
+        reg = ins->reg1;
         mask = CHAR_BIT << parm;
         sptr = v0regtoptr(vm, reg);
         mask--;
@@ -699,7 +675,7 @@ v0ldr(struct v0 *vm, v0ureg pc)
         src &= mask;
         *dptr |= src;
     } else {
-        if (v0opissigned(op)) {
+        if (v0insissigned(ins)) {
             switch (parm) {
                 case 0:
                     src = *(int8_t *)sptr;
@@ -722,7 +698,7 @@ v0ldr(struct v0 *vm, v0ureg pc)
             }
             *dptr = src;
         } else {
-            switch (op->parm) {
+            switch (ins->parm) {
                 case 0:
                     *(v0ureg *)dptr = *(uint8_t *)sptr;
 
@@ -749,29 +725,29 @@ v0ldr(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0str(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0reg        reg;
-    v0reg       *adr = v0getadr(vm, op, 2);
+    v0reg       *adr = v0getadr(vm, ins, 2);
     v0reg        src;
     v0ureg       usrc;
-    v0reg        parm = op->parm;
+    v0reg        parm = ins->parm;
     v0reg       *dptr;
-    v0reg       *sptr = v0adrtoptr(vm, op->reg1);
+    v0reg       *sptr = v0adrtoptr(vm, ins->reg1);
     v0reg        mask;
 
     if (!adr) {
         v0doxcpt(V0_INV_MEM_ADR);
     }
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
-    if ((op->reg1)) {
-        reg = op->reg2;
+    if ((ins->reg1)) {
+        reg = ins->reg2;
         mask = 1 << (parm + CHAR_BIT);
         src = *sptr;
         mask--;
@@ -779,8 +755,8 @@ v0str(struct v0 *vm, v0ureg pc)
         src &= mask;
         *dptr |= src;
     } else {
-        if (v0opissigned(op)) {
-            switch (op->parm) {
+        if (v0insissigned(ins)) {
+            switch (ins->parm) {
                 case 0:
                     src = *(int8_t *)adr;
                     *(int8_t *)adr = (int8_t)src;
@@ -802,7 +778,7 @@ v0str(struct v0 *vm, v0ureg pc)
                     break;
             }
         } else {
-            switch (op->parm) {
+            switch (ins->parm) {
                 case 0:
                     usrc = *(uint8_t *)adr;
                     *(uint8_t *)adr = (uint8_t)usrc;
@@ -830,24 +806,24 @@ v0str(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0rsr(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0reg        reg;
-    v0reg        parm = op->parm;
-    v0reg       *dptr = v0regtoptr(vm, op->reg2);
+    v0reg        parm = ins->parm;
+    v0reg       *dptr = v0regtoptr(vm, ins->reg2);
     v0reg       *sptr = NULL;
     v0reg        src = 0;
     v0reg        mask;
 
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
-    if ((op->reg1)) {
-        reg = op->reg1 + V0_INT_REGS;
+    if ((ins->reg1)) {
+        reg = ins->reg1 + V0_INT_REGS;
         mask = CHAR_BIT << parm;
         sptr = v0regtoptr(vm, reg);
         mask--;
@@ -855,7 +831,7 @@ v0rsr(struct v0 *vm, v0ureg pc)
         src &= mask;
         *dptr |= src;
     } else {
-        if (v0opissigned(op)) {
+        if (v0insissigned(ins)) {
             switch (parm) {
                 case 0:
                     src = *(int8_t *)sptr;
@@ -878,7 +854,7 @@ v0rsr(struct v0 *vm, v0ureg pc)
             }
             *dptr = src;
         } else {
-            switch (op->parm) {
+            switch (ins->parm) {
                 case 0:
                     *(v0ureg *)dptr = *(uint8_t *)sptr;
 
@@ -905,29 +881,29 @@ v0rsr(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0wsr(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0reg        reg;
-    v0reg       *adr = v0getadr(vm, op, 2);
+    v0reg       *adr = v0getadr(vm, ins, 2);
     v0reg        src;
     v0ureg       usrc;
-    v0reg        parm = op->parm;
+    v0reg        parm = ins->parm;
     v0reg       *dptr;
-    v0reg       *sptr = v0adrtoptr(vm, op->reg1);
+    v0reg       *sptr = v0adrtoptr(vm, ins->reg1);
     v0reg        mask;
 
     if (!adr) {
         v0doxcpt(V0_INV_MEM_ADR);
     }
-    if ((op->reg1) || op->adr == V0_IMM_ADR) {
-        pc += sizeof(struct v0op);
+    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+        pc += sizeof(struct v0ins);
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
-    if ((op->reg1)) {
-        reg = op->reg2 + V0_INT_REGS;
+    if ((ins->reg1)) {
+        reg = ins->reg2 + V0_INT_REGS;
         mask = 1 << (parm + CHAR_BIT);
         src = *sptr;
         mask--;
@@ -935,8 +911,8 @@ v0wsr(struct v0 *vm, v0ureg pc)
         src &= mask;
         *dptr |= src;
     } else {
-        if (v0opissigned(op)) {
-            switch (op->parm) {
+        if (v0insissigned(ins)) {
+            switch (ins->parm) {
                 case 0:
                     src = *(int8_t *)adr;
                     *(int8_t *)adr = (int8_t)src;
@@ -958,7 +934,7 @@ v0wsr(struct v0 *vm, v0ureg pc)
                     break;
             }
         } else {
-            switch (op->parm) {
+            switch (ins->parm) {
                 case 0:
                     usrc = *(uint8_t *)adr;
                     *(uint8_t *)adr = (uint8_t)usrc;
@@ -988,25 +964,25 @@ v0wsr(struct v0 *vm, v0ureg pc)
 
 #if defined(V0_MULTICORE)
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0ldl(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0stc(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0wreg       src = v0getarg1(vm, op, int32_t);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0wreg       src = v0getarg1(vm, ins, int32_t);
     v0wreg       res;
 }
 
 #else /* !defined(V0_MULTICORE) */
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0ldl(struct v0 *vm, v0ureg pc)
 {
     pc = v0ldr(vm, pc);
@@ -1014,7 +990,7 @@ v0ldl(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0stc(struct v0 *vm, v0ureg pc)
 {
     pc = v0str(vm, pc);
@@ -1024,123 +1000,123 @@ v0stc(struct v0 *vm, v0ureg pc)
 
 #endif /* V0_MULTICORE */
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0jmp(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc = v0getjmpofs(vm, op);
+    pc = v0getjmpofs(vm, ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0beq(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg        dest = v0getjmpofs(vm, op);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg        dest = v0getjmpofs(vm, ins);
 
     if (v0zfset(vm)) {
         pc = dest;
     } else {
-        pc += sizeof(struct v0op);
+        pc += sizeof(struct v0ins);
     }
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bne(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg        dest = v0getjmpofs(vm, op);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg        dest = v0getjmpofs(vm, ins);
 
     if (!v0zfset(vm)) {
         pc = dest;
     } else {
-        pc += sizeof(struct v0op);
+        pc += sizeof(struct v0ins);
     }
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0blt(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg        dest = v0getjmpofs(vm, op);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg        dest = v0getjmpofs(vm, ins);
 
     if (!v0ofset(vm)) {
         pc = dest;
     } else {
-        pc += sizeof(struct v0op);
+        pc += sizeof(struct v0ins);
     }
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bul(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0ureg       dest = v0getjmpofs(vm, op);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0ureg       dest = v0getjmpofs(vm, ins);
 
     if (!v0ofset(vm)) {
         pc = dest;
     } else {
-        pc += sizeof(struct v0op);
+        pc += sizeof(struct v0ins);
     }
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bgt(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg        dest = v0getjmpofs(vm, op);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg        dest = v0getjmpofs(vm, ins);
 
     if (v0ofset(vm)) {
         pc = dest;
     } else {
-        pc += sizeof(struct v0op);
+        pc += sizeof(struct v0ins);
     }
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bug(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg        dest = v0getjmpofs(vm, op);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg        dest = v0getjmpofs(vm, ins);
 
     if (v0ofset(vm) || v0zfset(vm)) {
         pc = dest;
     } else {
-        pc += sizeof(struct v0op);
+        pc += sizeof(struct v0ins);
     }
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0baf(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
-    v0reg        dest = v0getjmpofs(vm, op);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
+    v0reg        dest = v0getjmpofs(vm, ins);
 
     if (v0ofset(vm) || v0zfset(vm)) {
         pc = dest;
     } else {
-        pc += sizeof(struct v0op);
+        pc += sizeof(struct v0ins);
     }
     vm->regs[V0_PC_REG] = pc;
 
@@ -1167,15 +1143,15 @@ v0baf(struct v0 *vm, v0ureg pc)
  * arg0 <- after compiler has generated stack frame
  * retadr <- sp
  */
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0csr(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0ureg       sp = vm->regs[V0_SP_REG];
-    v0ureg       dest = v0getarg1(vm, op, int32_t);
+    v0ureg       dest = v0getarg1(vm, ins, int32_t);
     v0reg       *sptr;
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     sp -= sizeof(v0reg);
     sptr = v0adrtoptr(vm, sp);
     *sptr = pc;
@@ -1187,7 +1163,7 @@ v0csr(struct v0 *vm, v0ureg pc)
 
 /* create subroutine stack-frame;
  * - push frame pointer
- * - copy stack pointer to frame pointer
+ * - cinsy stack pointer to frame pointer
  * - push callee-save registers r8..r15
  * - allocate room for local variables on stack
  */
@@ -1203,14 +1179,14 @@ v0csr(struct v0 *vm, v0ureg pc)
  * ...
  * varN <- sp
  */
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0beg(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0ureg       fp = vm->regs[V0_SP_REG];
     v0ureg       sp = vm->regs[V0_SP_REG];
     v0reg       *rptr = v0regtoptr(vm, V0_R0_REG);
-    v0reg        nb = v0getarg1(vm, op, int32_t);
+    v0reg        nb = v0getarg1(vm, ins, int32_t);
     v0reg       *sptr;
 
     /* set stack frame up */
@@ -1218,7 +1194,7 @@ v0beg(struct v0 *vm, v0ureg pc)
     sptr = v0adrtoptr(vm, sp);
     vm->regs[V0_FP_REG] = sp;
     *sptr = fp;
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     sptr -= V0_SAVE_REGS;
     sp -= V0_SAVE_REGS * sizeof(v0reg);
     sptr[V0_R8_REG] = rptr[V0_R8_REG];
@@ -1239,8 +1215,8 @@ v0beg(struct v0 *vm, v0ureg pc)
 /* destroy subroutine stack-frame
  * - return value is in r0
  * - deallocate local variables
- * - pop callee save registers r8..r15
- * - pop caller frame pointer
+ * - pins callee save registers r8..r15
+ * - pins caller frame pointer
  */
 /*
  * stack after fin
@@ -1250,7 +1226,7 @@ v0beg(struct v0 *vm, v0ureg pc)
  * callee save registers r8..r15
  * local variables
  */
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0fin(struct v0 *vm, v0ureg pc)
 {
     v0ureg  sp = vm->regs[V0_FP_REG];
@@ -1258,7 +1234,7 @@ v0fin(struct v0 *vm, v0ureg pc)
     v0reg  *rptr = v0regtoptr(vm, V0_R0_REG);
     v0reg  *sptr = v0adrtoptr(vm, sp);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     sptr -= V0_SAVE_REGS + 1;
     rptr[V0_R15_REG] = sptr[0];
     rptr[V0_R14_REG] = sptr[1];
@@ -1280,7 +1256,7 @@ v0fin(struct v0 *vm, v0ureg pc)
 }
 
 /* return from subroutine;
- * - pop return address
+ * - pins return address
  */
 /*
  * stack after ret
@@ -1293,7 +1269,7 @@ v0fin(struct v0 *vm, v0ureg pc)
  * arg0 <- sp
  * retadr
  */
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0ret(struct v0 *vm, v0ureg pc)
 {
     v0ureg  sp = vm->regs[V0_SP_REG];
@@ -1307,7 +1283,7 @@ v0ret(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0sys(struct v0 *vm, v0ureg pc)
 {
     v0ureg  sp = vm->regs[V0_SP_REG];
@@ -1316,7 +1292,7 @@ v0sys(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0srt(struct v0 *vm, v0ureg pc)
 {
     v0ureg  sp = vm->regs[V0_SP_REG];
@@ -1325,7 +1301,7 @@ v0srt(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0thr(struct v0 *vm, v0ureg pc)
 {
     v0ureg  sp = vm->regs[V0_SP_REG];
@@ -1334,7 +1310,7 @@ v0thr(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0thx(struct v0 *vm, v0ureg pc)
 {
     v0ureg  sp = vm->regs[V0_SP_REG];
@@ -1354,7 +1330,7 @@ v0mkframe(struct v0 *vm, size_t narg, v0reg *tab)
     v0reg   n;
 
     sp -= V0_SAVE_REGS;
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     sptr = v0adrtoptr(vm, sp);
     sptr[V0_R0_REG] = rptr[V0_R0_REG];
     sptr[V0_R1_REG] = rptr[V0_R1_REG];
@@ -1415,13 +1391,13 @@ v0mkframe(struct v0 *vm, size_t narg, v0reg *tab)
 #endif
 
 /* call epilogue;
- * - number of return values (0, 1, 2) in op->parm
+ * - number of return values (0, 1, 2) in ins->parm
  * - get possible return value from r0
  * - deallocate stack arguments
  * - restore caller-save registers r0..r7
  * - set r0 to return value
  */
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0rmframe(struct v0 *vm, size_t narg)
 {
     v0reg  *rptr = v0regtoptr(vm, V0_R0_REG);
@@ -1431,10 +1407,10 @@ v0rmframe(struct v0 *vm, size_t narg)
 
     /* adjust SP past stack arguments */
     sp += narg;
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     /* store r0 and r1 in ret and rethi */
     sptr = v0adrtoptr(vm, sp);
-    sp += V0_SAVE_REGS * sizeof(struct v0op);
+    sp += V0_SAVE_REGS * sizeof(struct v0ins);
     /* restore caller-save registers */
     rptr[V0_R0_REG] = sptr[V0_R0_REG];
     rptr[V0_R1_REG] = sptr[V0_R1_REG];
@@ -1449,19 +1425,19 @@ v0rmframe(struct v0 *vm, size_t narg)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0psh(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0ureg       sp = vm->regs[V0_SP_REG];
-    v0reg       *sptr = v0getadr(vm, op, 1);
+    v0reg       *sptr = v0getadr(vm, ins, 1);
     v0reg       *dptr;
 
     sp -= sizeof(v0reg);
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     dptr = v0adrtoptr(vm, sp);
-    if (!op->reg1) {
-        pc += sizeof(union v0oparg);
+    if (!ins->reg1) {
+        pc += sizeof(union v0insarg);
     }
     *dptr = *sptr;
     vm->regs[V0_SP_REG] = sp;
@@ -1472,20 +1448,20 @@ v0psh(struct v0 *vm, v0ureg pc)
 
 /*
  * PSM takes the lowest register ID to be pushed and shift count
- * for number of registers in op->parm
+ * for number of registers in ins->parm
  */
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0psm(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0ureg       sp = vm->regs[V0_SP_REG];
-    v0reg        lo = v0getarg1(vm, op, int32_t);
-    v0reg        cnt = 4 << op->parm;
+    v0reg        lo = v0getarg1(vm, ins, int32_t);
+    v0reg        cnt = 4 << ins->parm;
     v0reg       *sptr = v0regtoptr(vm, lo);
     v0reg       *dptr = v0adrtoptr(vm, sp);
     v0reg        num;
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     dptr -= cnt;
     while (cnt) {
         num = min(8, cnt);
@@ -1520,16 +1496,16 @@ v0psm(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
-v0pop(struct v0 *vm, v0ureg pc)
+static _V0INSFUNC_T
+v0pins(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0ureg       sp = vm->regs[V0_SP_REG];
-    v0reg        reg = op->val;
+    v0reg        reg = ins->val;
     v0reg       *sptr = v0adrtoptr(vm, sp);
     v0reg       *dest = v0regtoptr(vm, reg);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     sp += sizeof(v0reg);
     *dest = *sptr;
     vm->regs[V0_SP_REG] = sp;
@@ -1538,19 +1514,19 @@ v0pop(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0pom(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0ureg       sp = vm->regs[V0_SP_REG];
-    v0reg        lo = op->val;
-    v0reg        cnt = 4 << op->parm;
+    v0reg        lo = ins->val;
+    v0reg        cnt = 4 << ins->parm;
     v0reg       *sptr = v0adrtoptr(vm, sp);
     v0reg       *dptr = v0regtoptr(vm, lo);
     v0reg        ndx = lo;
     v0reg        num;
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     sptr -= cnt;
     sp -= cnt;
     while (cnt) {
@@ -1586,57 +1562,57 @@ v0pom(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0cpf(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
     return pc;
 }
 
 #if defined(V0_MULTICORE)
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bar(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bwr(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0brd(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0wfe(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0sev(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1644,56 +1620,56 @@ v0sev(struct v0 *vm, v0ureg pc)
 
 #else /* !defined(V0_MULTICORE) */
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bar(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0bwr(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0brd(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0wfe(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0sev(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1701,45 +1677,45 @@ v0sev(struct v0 *vm, v0ureg pc)
 
 #endif /* V0_MULTICORE */
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0icd(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0imm(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0ird(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0iwr(struct v0 *vm, v0ureg pc)
 {
-    struct v0op      *op = v0adrtoptr(vm, pc);
-    uint8_t           port = op->val;
-    v0reg             parm = op->parm;
+    struct v0ins      *ins = v0adrtoptr(vm, pc);
+    uint8_t           port = ins->val;
+    v0reg             parm = ins->parm;
     struct v0iofuncs *funcs = vm->iovec;
     v0reg             val;
 
-    if (op->reg1) {
-        pc += sizeof(struct v0op);
-        val = vm->regs[op->reg2];
+    if (ins->reg1) {
+        pc += sizeof(struct v0ins);
+        val = vm->regs[ins->reg2];
     } else {
-        pc += sizeof(struct v0op) + sizeof(union v0oparg);
-        val = v0getarg1(vm, op, int32_t);
+        pc += sizeof(struct v0ins) + sizeof(union v0insarg);
+        val = v0getarg1(vm, ins, int32_t);
     }
     if (funcs[port].wrfunc) {
         funcs[port].wrfunc(vm, port, val);
@@ -1748,14 +1724,14 @@ v0iwr(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0hlt(struct v0 *vm, v0ureg pc)
 {
 
     return V0_HALTED;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0rst(struct v0 *vm, v0ureg pc)
 {
 
@@ -1763,15 +1739,15 @@ v0rst(struct v0 *vm, v0ureg pc)
 }
 
 // disable _all_ interrupts
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0cli(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0reg        imr = vm->regs[V0_IMR_REG];
-    v0reg       *dptr = v0getadr(vm, op, 1);
+    v0reg       *dptr = v0getadr(vm, ins, 1);
 
-    pc += sizeof(struct v0op);
-    if (op->adr == V0_DIR_ADR || op->adr == V0_NDX_ADR) {
+    pc += sizeof(struct v0ins);
+    if (ins->adr == V0_DIR_ADR || ins->adr == V0_NDX_ADR) {
         *dptr = imr;
     }
     vm->regs[V0_IMR_REG] = 0;
@@ -1781,17 +1757,17 @@ v0cli(struct v0 *vm, v0ureg pc)
 }
 
 // add bits to IMR in order to enable interrupts
-// optional memory-argument is mask to be restored
-static _V0OPFUNC_T
+// instional memory-argument is mask to be restored
+static _V0INSFUNC_T
 v0sti(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
     v0ureg       imr = vm->regs[V0_IMR_REG];
-    v0ureg       mask = vm->regs[op->reg1];
-    v0reg       *sptr = v0getadr(vm, op, 1);
+    v0ureg       mask = vm->regs[ins->reg1];
+    v0reg       *sptr = v0getadr(vm, ins, 1);
 
-    pc += sizeof(struct v0op);
-    if (op->adr == V0_DIR_ADR || op->adr == V0_NDX_ADR) {
+    pc += sizeof(struct v0ins);
+    if (ins->adr == V0_DIR_ADR || ins->adr == V0_NDX_ADR) {
         imr = *sptr;
     } else {
         imr |= mask;
@@ -1802,12 +1778,12 @@ v0sti(struct v0 *vm, v0ureg pc)
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0slp(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1815,23 +1791,23 @@ v0slp(struct v0 *vm, v0ureg pc)
 
 #if defined(V0_VIRTMEM)
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0fpg(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0fls(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
@@ -1839,29 +1815,29 @@ v0fls(struct v0 *vm, v0ureg pc)
 
 #else /* !defined(V0_VIRTMEM) */
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0fpg(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-static _V0OPFUNC_T
+static _V0INSFUNC_T
 v0fls(struct v0 *vm, v0ureg pc)
 {
-    struct v0op *op = v0adrtoptr(vm, pc);
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
-    pc += sizeof(struct v0op);
+    pc += sizeof(struct v0ins);
     vm->regs[V0_PC_REG] = pc;
 
     return pc;
 }
 
-#endif /* V0_VIRTMEM */
+#endif /* defined(V0_VIRTMEM) */
 
-#endif /* __V0_VM_OP_H__ */
+#endif /* __V0_VM_INS_H__ */
 
