@@ -3,6 +3,10 @@
 
 /* VIRTUAL MACHINE */
 
+#define V0_ROOT_UID 0
+#define V0_ROOT_GID 0
+#define V0_NO_ACL   0
+
 #include <v0/vm/conf.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -11,6 +15,38 @@
 #include <v0/vm/ins.h>
 
 struct v0;
+
+/* type is one of V0_EXEC_PERM, V0_WRITE_PERM, or V0_READ_PERM */
+#define v0chkperm(cred, perm, type)                                     \
+    (!(usr)                                                             \
+     ? 1                                                                \
+     : (((cred)->usr == (perm)->uid                                     \
+         && ((perm)->flg & ((type) << 6)))                              \
+        ? 1                                                             \
+        : (((cred)->grp == (perm)->gid                                  \
+            && ((perm)->flg & ((type) << 3)))                           \
+           ? 1                                                          \
+           : ((perm)->flg & (type)))))
+#define v0chkmap(cred, perm)                                            \
+    (!(usr)                                                             \
+     ? 1                                                                \
+     : (((cred)->usr == (perm)->uid || (cred)->grp == (perm)->gid)      \
+        && (perm)->flg & V0_IO_MAP_BIT))
+#define v0chkshm(cred, perm)                                            \
+    (!(usr)                                                             \
+     ? 1                                                                \
+     : (((cred)->usr == (perm)->uid || (cred)->grp == (perm)->gid)      \
+        && (perm)->flg & V0_IO_SHM_BIT))
+#define v0chkbuf(cred, perm)                                            \
+    (!(usr)                                                             \
+     ? 1                                                                \
+     : (((cred)->usr == (perm)->uid || (cred)->grp == (perm)->gid)      \
+        && (perm)->flg & V0_IO_BUF_BIT))
+#define v0chksyn(cred, perm)                                            \
+    (!(usr)                                                             \
+     ? 1                                                                \
+     : (((cred)->usr == (perm)->uid || (cred)->grp == (perm)->gid)      \
+        && (perm)->flg & V0_IO_SYN_BIT))
 
 typedef int64_t  v0wreg; // full-width register (temporary values)
 typedef int32_t  v0reg;  // signed user-register type
@@ -24,52 +60,56 @@ struct v0iofuncs {
     v0iofunc_t *wrfunc;
 };
 
-#define V0_RET_REG       V0_R0_REG
-#define V0_AC_REG        V0_R6_REG
-#define V0_VC_REG        V0_R7_REG
-/* CALLER-SAVE REGISTERS */
-#define V0_R0_REG        0x00 // function return value, first function argument
-#define V0_R1_REG        0x01 // second function argument
-#define V0_R2_REG        0x02 // third function argument
-#define V0_R3_REG        0x03 // fourth function argument
-#define V0_R4_REG        0x04 // fifth function argument
-#define V0_R5_REG        0x05 // sixth function argument
-#define V0_R6_REG        0x06 // stack-argument count
-#define V0_R7_REG        0x07 // stack-variable count
-/* CALLEE-SAVE REGISTERS */
-#define V0_R8_REG        0x08
-#define V0_R9_REG        0x09
-#define V0_R10_REG       0x0a
-#define V0_R11_REG       0x0b
-#define V0_R12_REG       0x0c
-#define V0_R13_REG       0x0d
-#define V0_R14_REG       0x0e
-#define V0_R15_REG       0x0f
-#define V0_INT_REGS      16 // # of integer/scalar registers
-#define V0_SAVE_REGS     8  // caller saves r0..r7, callee r8..r15
-/* SYSTEM REGISTERS */
-#define V0_PC_REG        (V0_INT_REGS + 0) // program counter
-#define V0_FP_REG        (V0_INT_REGS + 1) // frame pointer
-#define V0_SP_REG        (V0_INT_REGS + 2) // stack pointer
-#define V0_RTA_REG       (V0_INT_REGS + 3) // return address
-#define V0_MSW_REG       (V0_INT_REGS + 4) // machine status word
-#define V0_IMR_REG       (V0_INT_REGS + 5) // interrupt-mask (1-bit for enabled)
-#define V0_IVR_REG       (V0_INT_REGS + 6) // interrupt vector address
-#define V0_PDR_REG       (V0_INT_REGS + 7) // page directory address
-#define V0_THR_REG       (V0_INT_REGS + 8) // thread ID + permission flags
-/* READ-ONLY REGISTERS */
-#define V0_MFW_REG       (V0_INT_REGS + V0_SYS_REGS - 1) // machine feature word
-#define V0_SYS_REGS      16
-/* system register IDs */
-#define V0_STD_REGS      (V0_INT_REGS + V0_SYS_REGS) // total number of user and system registers
-// shadow registers are used for function and system calls instead of stack
-#define V0_SREG(x)       (V0_STD_REGS + (x)) // shadow-registers
-/* values for regs[V0_MSW] */
-#define V0_MSW_DEF_BITS  (V0_IF_BIT)
-#define V0_MSW_ZF_BIT    (1U << 0)
-#define V0_MSW_OF_BIT    (1U << 1)  // overflow
-#define V0_MSW_CF_BIT    (1U << 2)  // carry-flag, return bit for BTR, BTS, BTC
-#define V0_MSW_IF_BIT    (1U << 3)  // interrupts enabled
+/* I/O credential structure */
+struct v0iocred {
+    uint32_t uid;       // [owner] user ID
+    uint32_t gid;       // [owner] group ID
+    uint32_t usr;       // object user ID
+    uint32_t grp;       // object group ID
+};
+
+/* permission bits for v0chkperm() type-argument */
+#define V0_EXEC_PERM  1
+#define V0_WRITE_PERM 2
+#define V0_READ_PERM  4
+
+/* execute, write, and read permissions for user, group, all */
+#define V0_IO_AX_BIT  (V0_EXEC_PERM << 0)
+#define V0_IO_AW_BIT  (V0_WRITE_PERM << 0)
+#define V0_IO_AR_BIT  (V0_READ_PERM << 0)
+#define V0_IO_GX_BIT  (V0_EXEC_PERM << 3)
+#define V0_IO_GW_BIT  (V0_WRITE_PERM << 3)
+#define V0_IO_GR_BIT  (V0_READ_PERM << 3)
+#define V0_IO_UX_BIT  (V0_EXEC_PERM << 6)
+#define V0_IO_UW_BIT  (V0_WRITE_PERM << 6)
+#define V0_IO_UR_BIT  (V0_READ_PERM << 6)
+/* user-space access control bit */
+#define V0_IO_USR_BIT 0x04000000
+/* map-permission */
+#define V0_IO_MAP_BIT 0x08000000
+/* share-permission */
+#define V0_IO_SHM_BIT 0x10000000
+/* buffer-cache block */
+#define V0_IO_BUF_BIT 0x20000000
+/* synchronous I/O */
+#define V0_IO_SYN_BIT 0x40000000
+/* ACL for permissions */
+#define V0_IO_ACL_BIT 0x80000000
+struct v0acl {
+    uint32_t uid;       // user ID
+    uint32_t gid;       // group ID
+    uint32_t flg;       // permission bits
+    uint32_t list;      // next ^ prev control objects in list or NULL
+};
+
+struct v0iodesc {
+    uint32_t        adr;        // mapped I/O-address
+    uint32_t        lim;        // last mapped byte address
+    uint32_t        flg;        // permission and other flag-bits
+    uint32_t        acl;        // optional ACL base address or NULL
+    struct v0iocred cred;       // access credentials
+};
+
 /* program segments */
 #define V0_TRAP_SEG      0x00
 #define V0_CODE_SEG      0x01 // code
@@ -107,6 +147,7 @@ struct v0 {
     long              flg;
     v0pagedesc       *membits;
     char             *mem;
+    size_t            memsize;
     struct v0iofuncs *iovec;
     FILE             *vtdfp;
     char             *vtdpath;

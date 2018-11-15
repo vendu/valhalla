@@ -2,6 +2,7 @@
 #include <vas/conf.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include <errno.h>
 //#include <zero/fastudiv.h>
 #include <v0/vm/types.h>
@@ -15,6 +16,12 @@ extern void   vasinit(void);
 extern long * vasgetinst(char *str);
 extern long   vasaddop(const char *str, uint8_t code, uint8_t narg);
 
+#if !defined(__GNUC__) && 0
+#define _V0INSFUNC_T __inline__ uint32_t
+#else
+#define _V0INSFUNC_T static uint32_t
+#endif
+
 extern struct vasop     *v0optab[256];
 extern char             *vaslinebuf;
 extern long              vasreadbufcur;
@@ -25,18 +32,30 @@ extern vasuword          _startset;
 static long long         v0speedcnt;
 #endif
 #if defined(V0_DEBUG_TABS)
-static struct v0insinfo  v0insinfotab[V0_NINST_MAX];
+static struct v0insinfo  v0insinfotab[V0_INSTS_MAX];
 #endif
-char                    *v0opnametab[V0_NINST_MAX];
-static _V0OPTAB_T        v0jmptab[V0_NINST_MAX];
+char                    *v0opnametab[V0_INSTS_MAX];
+#if defined(__GNUC__) && 0
+#define v0entry(x)                                                      \
+    v0ins##x:                                                           \
+    pc = v0##x(vm, pc);                                                 \
+    insjmp(vm, pc)
+#define _v0insadr(x) &&v0##xins
+#define _V0INSTAB_T  void *
+#else
+#define _v0insadr(x) v0##x##ins
+typedef v0reg        v0insfunc(struct v0 *vm, v0ureg pc);
+#define _V0INSTAB_T  v0insfunc *
+#endif
+static  _V0INSTAB_T *v0jmptab[V0_INSTS_MAX];
 
 void
-v0printop(struct v0op *op)
+v0printop(struct v0ins *ins)
 {
-    int val = op->code;
+    int val = ins->code;
 
-    fprintf(stderr, "code\t%x - unit == %x, inst == %x\n",
-            val, v0getunit(val), v0getinst(val));
+    fprintf(stderr, "code\t%x - reg1 == %x, reg2 == %x\n",
+            val, v0insreg(ins, 0), v0insreg(ins, 1));
 
     return;
 }
@@ -154,6 +173,7 @@ v0init(struct v0 *vm)
         v0initio(vm);
         vm->regs[V0_FP_REG] = 0x00000000;
         vm->regs[V0_SP_REG] = V0_RAM_SIZE - 1;
+        vm->memsize = V0_RAM_SIZE;
     }
     v0vm = vm;
 
@@ -163,99 +183,108 @@ v0init(struct v0 *vm)
 int
 v0loop(struct v0 *vm, v0ureg pc)
 {
-    //    static _V0OPTAB_T  jmptab[V0_MAX_INSTS];
-    struct v0op *op = v0adrtoptr(vm, pc);
+    //    static _V0INSTAB_T  jmptab[V0_MAX_INSTS];
+    struct v0ins *ins = v0adrtoptr(vm, pc);
 
 #if defined(__GNUC__) && 0
     do {
-        v0reg code = op->code;
+        v0reg code = ins->code;
 
-        goto *(v0jmptab[code]);
+        {
+            /* ALU */
+            v0nopins:
+            v0notins:
+            v0andins:
+            v0iorins:
+            v0xorins:
+            v0shlins:
+            v0shrins:
+            v0sarins:
+            v0incins:
+            v0decins:
+            v0addins:
+            v0aduins:
+            v0adcins:
+            v0subins:
+            v0sbuins:
+            v0sbcins:
+            v0cmpins:
+            v0crpins:
+            v0mulins:
+            v0mluins:
+            v0muhins:
+            v0mhuins:
+            v0divins:
+            v0dvuins:
+            /* bit operations */
+            v0sexins:
+            v0zexins:
+            v0leains:
+            v0clzins:
+            v0hamins:
+            v0bswins:
+            v0btsins:
+            v0btcins:
+            v0bclins:
+            /* load-store unit */
+            v0ldrins:
+            v0strins:
+            v0barins:
+            v0brdins:
+            v0bwrins:
+            v0pshins:
+            v0psmins:
+            v0popins:
+            v0pomins:
+            v0cpfins:
+            v0fpgins:
+            v0flsins:
+            v0ldlins:
+            v0stcins:
+            /* branches and control flow */
+            v0jmpins:
+            v0beqins:
+            v0bneins:
+            v0bltins:
+            v0bulins:
+            v0bgtins:
+            v0bugins:
+            v0bafins:
+            v0csrins:
+            v0begins:
+            v0finins:
+            v0retins:
+            v0sysins:
+            v0srtins:
+            v0thrins:
+            v0thxins:
+            /* interrupts and system control */
+            v0hltins:
+            v0rstins:
+            v0cliins:
+            v0stiins:
+            v0intins:
+            v0slpins:
+            v0wfeins:
+            v0sevins:
+            /* I/= operations */
+            v0icdins:
+            v0ircins:
+            v0iwcins:
+            v0ilmins:
+            v0iocins:
 
-        if (init) {
-            v0entry(nop);
-            v0entry(not);
-            v0entry(and);
-            v0entry(ior);
-            v0entry(xor);
-            v0entry(shl);
-            v0entry(shr);
-            v0entry(sar);
-            v0entry(inc);
-            v0entry(dec);
-            v0entry(add);
-            v0entry(adc);
-            v0entry(sub);
-            v0entry(sbc);
-            v0entry(cmp);
-            v0entry(crp);
-            v0entry(mul);
-            v0entry(muh);
-            v0entry(div);
-            v0entry(sex);
-            v0entry(lea);
-            v0entry(clz);
-            v0entry(ham);
-            v0entry(bsw);
-            v0entry(bts);
-            v0entry(btc);
-            v0entry(ldr);
-            v0entry(str);
-            v0entry(rsr);
-            v0entry(wsr);
-            v0entry(ldl);
-            v0entry(stc);
-            v0entry(jmp);
-            v0entry(beq);
-            v0entry(bne);
-            v0entry(blt);
-            v0entry(bul);
-            v0entry(bgt);
-            v0entry(bug);
-            v0entry(baf);
-            v0entry(csr);
-            v0entry(beg);
-            v0entry(fin);
-            v0entry(ret);
-            v0entry(sys);
-            v0entry(srt);
-            v0entry(thr);
-            v0entry(thx);
-            v0entry(psh);
-            v0entry(psm);
-            v0entry(pop);
-            v0entry(pom);
-            v0entry(cpf);
-            v0entry(bar);
-            v0entry(brd);
-            v0entry(bwr);
-            v0entry(wfe);
-            v0entry(sev);
-#if 0
-            v0entry(clk);
-            v0entry(clr);
-#endif
-            v0entry(icd);
-            v0entry(imm);
-            v0entry(ird);
-            v0entry(iwr);
-            v0entry(hlt);
-            v0entry(rst);
-            v0entry(cli);
-            v0entry(sti);
-            v0entry(int);
-            v0entry(slp);
-            v0entry(fpg);
-            v0entry(fls);
+            goto *(v0jmptab[code]);
         }
     } while (1);
 
 #else /* !defined(__GNUC__) */
 
-    while (v0opisvalid(vm, op)) {
-        struct v0op *op = v0adrtoptr(vm, pc);
-        uint8_t      code = op->code;
-        v0opfunc    *func = v0jmptab[code];
+    v0initins(v0jmptab);
+    while (v0insisvalid(vm, ins)) {
+        struct v0ins *ins = v0adrtoptr(vm, pc);
+        uint8_t       code = ins->code;
+        _V0INSFUNC_T *func = v0jmptab[code];
 
         pc = func(vm, pc);
     }

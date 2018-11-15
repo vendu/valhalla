@@ -20,27 +20,9 @@
 #include <vas/vas.h>
 
 #define V0_HALTED                       0xffffffffU // special PC-value
-#define V0_INS_INVAL                     NULL
+#define V0_INS_INVAL                    NULL
 #define V0_ADR_INVAL                    0x00000000
 #define V0_CNT_INVAL                    (-1)
-#if !defined(__GNUC__) || !0
-#define _V0INSFUNC_T __inline__ uint32_t
-#else
-#define _V0INSFUNC_T static __inline__ uint32_t
-#endif
-
-#if defined(__GNUC__) && 0
-#define v0entry(x)                                                      \
-    v0ins##x:                                                           \
-    pc = v0##x(vm, pc);                                                 \
-    insjmp(vm, pc)
-#define _v0insadr(x) &&v0ins##x
-#define _V0INSTAB_T  void *
-#else
-#define _v0insadr(x) v0##x
-typedef v0reg       v0insfunc(struct v0 *vm, v0ureg pc);
-#define _V0INSTAB_T  v0insfunc *
-#endif
 
 extern char     *v0insnametab[V0_NINST_MAX];
 extern vasuword  _startadr;
@@ -70,8 +52,8 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 #define insaddinfo(unit, ins)
 #endif
 
-#define v0traceins(vm, ins, pc) v0disasm(vm, ins, pc);
-#define v0insisvalid(vm, pc) (vm)
+#define v0traceins(vm, ins, pc)   v0disasm(vm, ins, pc);
+#define v0insisvalid(vm, pc) (vm) ((pc) < vm->
 #if defined(__GNUC__) && 0
 #define insjmp(vm, pc)                                                  \
     do {								\
@@ -90,14 +72,11 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 	    return V0_TEXT_FAULT;					\
 	}								\
     } while (0)
-#if 0
+#else
 #define insjmp(vm, pc)                                                  \
     do {								\
         struct v0ins *_ins = v0adrtoptr(vm, pc);                       \
 									\
-	while (v0insisnins(_ins)) {					\
-	    (pc) += sizeof(struct v0ins);				\
-	}								\
 	if (v0insisvalid(_ins, pc)) {					\
 	    if (_ins->adr == V0_DIR_ADR || _ins->adr == V0_NDX_ADR) {   \
                 (pc) += sizeof(struct v0ins) + sizeof(union v0insarg);	\
@@ -112,7 +91,6 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
 	    return V0_TEXT_FAULT;					\
 	}								\
     } while (0)
-#endif
 #endif /* defined(__GNUC__) */
 #define v0addins(ins, str, narg)                                        \
     (vasaddins(#str, ins, narg))
@@ -121,19 +99,9 @@ v0procxcpt(const int xcpt, const char *file, const char *func, const int line)
      vasaddins(#str, ins, narg),                                        \
      ((_V0INSTAB_T *)(tab))[(ins)] = _v0insadr(str))
 
-#define v0setinsbits(ins, bits1, bits2, tab)                            \
-    ((tab)[(ins)] = (bits1) | ((bits2 << 16)))
-#define v0getinsbits1(ins, tab) ((tab)[(ins)] & 0xffff)
-#define v0getinsbits2(ins, tab) (((tab)[(ins)] >> 16) & 0xffff)
-
-#define v0initinsbits(tab)                                              \
+#define v0initins(tab)                                                  \
     do {                                                                \
-        ;                                                               \
-    } while (0)
-
-#define v0initinss(tab)                                                 \
-    do {                                                                \
-        v0setins(V0_NINS, nins, 0, tab);                                \
+        v0setins(V0_NOP, nop, 0, tab);                                  \
         v0setins(V0_NOT, not, 1, tab);                                  \
         v0setins(V0_AND, and, 2, tab);                                  \
         v0setins(V0_IOR, ior, 2, tab);                                  \
@@ -213,7 +181,7 @@ v0not(struct v0 *vm, v0ureg pc)
     v0reg       *sptr = v0getadr(vm, ins, 1);
     v0reg        src = *sptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -233,7 +201,7 @@ v0and(struct v0 *vm, v0ureg pc)
     v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -253,7 +221,7 @@ v0ior(struct v0 *vm, v0ureg pc)
     v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -273,7 +241,7 @@ v0xor(struct v0 *vm, v0ureg pc)
     v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -293,7 +261,7 @@ v0shl(struct v0 *vm, v0ureg pc)
     v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -314,7 +282,7 @@ v0shr(struct v0 *vm, v0ureg pc)
     v0reg        dest = *dptr;
     v0reg        fill = ~((v0reg)0) >> src;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -347,7 +315,7 @@ v0sar(struct v0 *vm, v0ureg pc)
 
     dest >>= src;
     fill = -fill << (CHAR_BIT * sizeof(v0reg) - src);
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -366,7 +334,7 @@ v0inc(struct v0 *vm, v0ureg pc)
     v0reg       *sptr = v0getadr(vm, ins, 1);
     v0reg        src = *sptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -385,7 +353,7 @@ v0dec(struct v0 *vm, v0ureg pc)
     v0reg       *sptr = v0getadr(vm, ins, 1);
     v0reg        src = *sptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -406,7 +374,7 @@ v0add(struct v0 *vm, v0ureg pc)
     v0reg        dest = *dptr;
     v0reg        res = src;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -431,7 +399,7 @@ v0adc(struct v0 *vm, v0ureg pc)
     v0reg        dest = *dptr;
     v0reg        res = src;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -454,7 +422,7 @@ v0sub(struct v0 *vm, v0ureg pc)
     v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -474,7 +442,7 @@ v0sbc(struct v0 *vm, v0ureg pc)
     v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -494,7 +462,7 @@ v0cmp(struct v0 *vm, v0ureg pc)
     v0reg        src = v0getarg1(vm, ins, int32_t);
     v0reg        dest = *dptr;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -529,7 +497,7 @@ v0crp(struct v0 *vm, v0ureg pc)
     double      *dptr = (double *)v0getadr(vm, ins, 2);
     double       res = 1.0 / src;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -550,7 +518,7 @@ v0mul(struct v0 *vm, v0ureg pc)
     v0wreg       dest;
 
     res *= src;
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -573,7 +541,7 @@ v0muh(struct v0 *vm, v0ureg pc)
     v0wreg       dest;
 
     res *= src;
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
@@ -656,18 +624,18 @@ v0ldr(struct v0 *vm, v0ureg pc)
     struct v0ins *ins = v0adrtoptr(vm, pc);
     v0reg        reg;
     v0reg        parm = ins->parm;
-    v0reg       *dptr = v0regtoptr(vm, ins->reg2);
+    v0reg       *dptr = v0regtoptr(vm, v0insreg(ins, 1));
     v0reg       *sptr = NULL;
     v0reg        src = 0;
     v0reg        mask;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
-    if ((ins->reg1)) {
-        reg = ins->reg1;
+    if (v0insreg(ins, 0)) {
+        reg = v0insreg(ins, 0);
         mask = CHAR_BIT << parm;
         sptr = v0regtoptr(vm, reg);
         mask--;
@@ -735,19 +703,19 @@ v0str(struct v0 *vm, v0ureg pc)
     v0ureg       usrc;
     v0reg        parm = ins->parm;
     v0reg       *dptr;
-    v0reg       *sptr = v0adrtoptr(vm, ins->reg1);
+    v0reg       *sptr = v0adrtoptr(vm, v0insreg(ins, 0));
     v0reg        mask;
 
     if (!adr) {
         v0doxcpt(V0_INV_MEM_ADR);
     }
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
-    if ((ins->reg1)) {
-        reg = ins->reg2;
+    if (v0insreg(ins, 0)) {
+        reg = v0insreg(ins, 1);
         mask = 1 << (parm + CHAR_BIT);
         src = *sptr;
         mask--;
@@ -812,18 +780,18 @@ v0rsr(struct v0 *vm, v0ureg pc)
     struct v0ins *ins = v0adrtoptr(vm, pc);
     v0reg        reg;
     v0reg        parm = ins->parm;
-    v0reg       *dptr = v0regtoptr(vm, ins->reg2);
+    v0reg       *dptr = v0regtoptr(vm, v0insreg(ins, 1));
     v0reg       *sptr = NULL;
     v0reg        src = 0;
     v0reg        mask;
 
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
-    if ((ins->reg1)) {
-        reg = ins->reg1 + V0_INT_REGS;
+    if (v0insreg(ins, 0)) {
+        reg = v0insreg(ins, 0) + V0_INT_REGS;
         mask = CHAR_BIT << parm;
         sptr = v0regtoptr(vm, reg);
         mask--;
@@ -891,19 +859,19 @@ v0wsr(struct v0 *vm, v0ureg pc)
     v0ureg       usrc;
     v0reg        parm = ins->parm;
     v0reg       *dptr;
-    v0reg       *sptr = v0adrtoptr(vm, ins->reg1);
+    v0reg       *sptr = v0adrtoptr(vm, v0insreg(ins, 0));
     v0reg        mask;
 
     if (!adr) {
         v0doxcpt(V0_INV_MEM_ADR);
     }
-    if ((ins->reg1) || ins->adr == V0_IMM_ADR) {
+    if (v0insreg(ins, 0) || ins->adr == V0_IMM_ADR) {
         pc += sizeof(struct v0ins);
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
     }
-    if ((ins->reg1)) {
-        reg = ins->reg2 + V0_INT_REGS;
+    if (v0insreg(ins, 0)) {
+        reg = v0insreg(ins, 1) + V0_INT_REGS;
         mask = 1 << (parm + CHAR_BIT);
         src = *sptr;
         mask--;
@@ -1436,7 +1404,7 @@ v0psh(struct v0 *vm, v0ureg pc)
     sp -= sizeof(v0reg);
     pc += sizeof(struct v0ins);
     dptr = v0adrtoptr(vm, sp);
-    if (!ins->reg1) {
+    if (!v0insreg(ins, 0)) {
         pc += sizeof(union v0insarg);
     }
     *dptr = *sptr;
@@ -1710,9 +1678,9 @@ v0iwr(struct v0 *vm, v0ureg pc)
     struct v0iofuncs *funcs = vm->iovec;
     v0reg             val;
 
-    if (ins->reg1) {
+    if v0insreg(ins, 0) {
         pc += sizeof(struct v0ins);
-        val = vm->regs[ins->reg2];
+        val = vm->regs[v0insreg(ins, 1)];
     } else {
         pc += sizeof(struct v0ins) + sizeof(union v0insarg);
         val = v0getarg1(vm, ins, int32_t);
@@ -1763,7 +1731,7 @@ v0sti(struct v0 *vm, v0ureg pc)
 {
     struct v0ins *ins = v0adrtoptr(vm, pc);
     v0ureg       imr = vm->regs[V0_IMR_REG];
-    v0ureg       mask = vm->regs[ins->reg1];
+    v0ureg       mask = vm->regs[v0insreg(ins, 0)];
     v0reg       *sptr = v0getadr(vm, ins, 1);
 
     pc += sizeof(struct v0ins);
