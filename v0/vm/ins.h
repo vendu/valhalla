@@ -1,6 +1,9 @@
 #ifndef __V0_VM_INS_H__
 #define __V0_VM_INS_H__
 
+#include <stdint.h>
+#include <valhalla/cdefs.h>
+#include <valhalla/param.h>
 #include <v0/vm/types.h>
 
 /* INSTRUCTION FORMAT */
@@ -33,6 +36,7 @@ union v0insarg {
 #define v0inhasspad(ins)                                                \
     (v0insis32bit(ins) && ((uint16_t)(ins)->arg[0] == 0xffff))
 
+#define v0getadrmode(ins) ((long)((ins)->arg[0].data.u8.info & V0_ADR_MASK))
 struct v0insdata {
     union {
         struct {
@@ -42,28 +46,37 @@ struct v0insdata {
         int16_t     i16;
         uint16_t    u16;
     } data;
+    union v0insarg arg[VLA];
 };
 
 #define V0_PARM_MASK       0x03 // shift count for scaling addresses A + R << p
 #define V0_ADR_MASK        0x0c // addressing mode info
 /* addressing modes */
 /* register addressing is detected with nonzero (op->reg) */
-#define V0_IMM_ADR         0    // operand follows opcode, e.g. op->arg[0].i32
-#define V0_DIR_ADR         0x04 // address follows opcode, op->arg[0].adr
-#define V0_NDX_ADR         0x08 // reg[ndx << op->parm], ndx val or after opcode
-#define V0_PIC_ADR         0x0c // pc[ndx << op->parm], ndx val or after opcode
-/* flags for arithmetic instructions */
+#define V0_REG_ADR         0x00 // register operands
+#define V0_IMM_ADR         0x04 // operand follows opcode, e.g. op->arg[0].i32
+#define V0_PIC_ADR         0x05 // PC-relative, i.e. x(%pc) for shared objects
+/* else indexed: pc[ndx << op->parm], ndx follows opcode */
+/* parm-field flags for arithmetic instructions */
 #define V0_ATOM_BIT        (1U << 5) // LOCK-prefix
-#define V0_SAT_BIT         (1U << 6) // SAT-prefix + size in parm
-#define V0_SATU_BIT        (1U << 7) // SATU-prefix + size in parm
+#define V0_SAT_BIT         (1U << 6) // signed saturation to 8- or 16-bit
+#define V0_SATU_BIT        (1U << 7) // unsigned saturatiion to 8- or 16-bit
 /* flags for logical instructions */
-#define V0_INV_BIT         (1U << 6)
+#define V0_INV_BIT         (1U << 5) // invert bits
 /* flags for shift instructions */
-#define V0_MASK_BIT        (1U << 5)
-#define V0_ROT_BIT         (1U << 6)
-#define V0_ADD_BIT         (1U << 7)
+#define V0_ADD_BIT         (1U << 5) // addition
+#define V0_MASK_BIT        (1U << 6) // fuse instruction such as ADD with AND
+#define V0_ROT_BIT         (1U << 7) // perform rotation together with shift
+/* flags for multiplication and division */
+#define V0_UNSIGNED_BIT    (1U << 5) // unsigned operations
+#define V0_HIGH_BIT        (1U << 6) // return high 32 bits for multplication
+#define V0_ADD_BIT         (1U << 7) // fused multiply-and-add
+#define V0_CRP_BIT         (1U << 8) // compute inverse reciprocal
 /* flags for load-store instructions */
 #define V0_SYS_BIT         (1U << 5) // e.g. LDR %fp -> denotes system-register
+#define V0_LINK_BIT        (1U << 6) // clear cacheline dirty-bit
+#define V0_STC_BIT         (1U << 7) // store if cacheline not modified
+#define V0_LOCK_BIT        (1U << 8) // perform operation atomically
 /* imm16- and imu16- immediate fields */
 #define V0_IMM16_VAL_MAX   0x7fff
 #define V0_IMM16_VAL_MIN   (-0x7fff - 1)
@@ -100,41 +113,43 @@ struct v0insdata {
 #define v0cnt(ins)         ((ins)->arg[0].data.u8.cnt)
 #define v0setinsreg(ins, reg, id)                                       \
     ((ins)->parm |= (reg) << (4 * (id)))
-#define v0getadr(vm, op, id, tmp)                                       \
-    (((tmp) = v0insreg(ins, id))                                        \
-     ? (void *)(&(vm)->mem[(vm)->regs[(tmp)]])                          \
-     : ((((tmp) = (op)->adr) == V0_IMM_ADR)                             \
-        ? (void *)(&(vm)->mem[(op)->arg[0].i32])                        \
-        : (((tmp) == V0_DIR_ADR)                                        \
-           ? (void *)(&(vm)->mem[(op)->arg[0].adr])                     \
-           : (void *)(&(vm)->mem[_v0calcadr((vm)->regs[v0insreg(ins, id)], (op))]))))
-#define v0getarg1(vm, op, type) (*(type *)v0getadr(vm, op, 0, tmp))
-#define v0getarg2(vm, op, type) (*(type *)v0getadr(vm, op, 1, tmp))
-#define v0getjmpofs(vm, op, tmp)                                        \
-    ((((tmp) = v0adrmode((op))) == V0_PIC_ADR)                          \
-     ? (vm)->mem[_v0calcjmpofs((vm)->regs[V0_PC_REG], op)]              \
-     : (((tmp) = v0insreg(op, 0))                                       \
-        ? (vm)->regs[(tmp)]                                             \
-        : ((((tmp) = v0adrmode(op)) == V0_IMM_ADR)                      \
-           ? (vm)->mem[(op)->arg[0].ofs]                                \
-           : (((tmp) == V0_DIR_ADR)                                     \
-              ? (vm)->mem[(op)->arg[0].val[0].adr]                      \
-              : (vm)->mem[_v0calcadr((vm), v0insreg(op, 0), (op))]))))
-#define _v0calcadr(vm, reg, op)                                         \
-    ((vm)->regs[(reg)] + ((op)->arg[0].ofs << ((op)->parm)))
-#define _v0calcjmpofs(vm, reg, op)                                      \
-    ((vm)->regs[(reg)] + (((op)->val) ? ((op)->val << 1) : ((op)->arg[0].ofs << 1)))
+#define _v0calcadr(vm, reg, ins, ptr)                                   \
+    ((ptr) = (v0reg *)roundup2((uintptr_t)(ptr), 4),            \
+     ((vm)->regs[(reg)]                                                 \
+      + (((union v0insarg *)(ptr))->ofs << (ins)->parm)))
+#define v0getadr(vm, ins, id, ptr)                                      \
+    ((v0getadrmode(ins) == V0_IMM_ADR)                                  \
+     ? ((void *)&(vm)->mem[((union v0insarg *)(uintptr_t)((ins) + 2))->adr]) \
+     : ((v0getadrmode(ins) == V0_PIC_ADR)                               \
+        ? ((void *)&((vm)->mem[(_v0calcadr(vm,                          \
+                                           V0_SYSREG(V0_PC),            \
+                                           ins,                         \
+                                           ptr))]))                     \
+        : ((void *)&((vm)->regs[(v0insreg(ins, id))]))))
+#define v0getarg1(vm, ins, type, ptr) (*(type *)(v0getadr(vm, ins, 0, ptr)))
+#define v0getarg2(vm, ins, type, ptr) (*(type *)(v0getadr(vm, ins, 1, ptr)))
+#define v0getjmpofs(vm, ins, ptr)                                       \
+    ((v0getadrmode(ins) == V0_REG_ADR)                                  \
+     ? (((vm)->regs[(v0insreg(ins, 0))])                                \
+        : ((v0getadrmode(ins)) == V0_IMM_ADR)                          \
+        ? (((vm)->mem[((union v0insarg *)((ins) + 2))->adr])           \
+           : ((v0getadrmode(ins)) == V0_PIC_ADR)                        \
+           ? ((vm)->mem[(_v0calcadr(vm), V0_PC_REG, ins, ptr)])         \
+           : ((vm)->mem[_v0calcadr((vm),                                \
+                                   v0insreg(ins, 0),                    \
+                                   ins,                                 \
+                                   ptr)]))))
 
 /* values for the parm field for prefixes and such (code == 0xff) */
-#define V0_INS_LOCK 0x01   // lock bus for synchronization
-#define V0_INS_MARK 0x02   // mark accessed cacheline dirty
-#define V0_INS_WAIT 0x03   // wait for interrupt or cacheline-event to occur
-#define V0_INS_SIG  0x04   // send cacheline-signal to listening/waiting threads
-#define V0_INS_VAL2 0x05   // hint instruction to return two values (R1 and R2)
+#define V0_INS_LOCK 0x01        // lock bus for synchronization
+#define V0_INS_MARK 0x02        // mark accessed cacheline dirty
+#define V0_INS_WAIT 0x03        // wait for interrupt or cacheline-event to occur
+#define V0_INS_SIG  0x04        // send cacheline-signal to listening/waiting threads
+#define V0_INS_VAL2 0x05        // hint instruction to return two values (R1 and R2)
 struct v0ins {
-    uint8_t          code;     // instruction ID + possible V0_INS_32_BIT-flag
-    uint8_t          parm;     // register operand IDs (if non-zero)
-    struct v0insdata arg[VLA]; // instruction data if present
+    uint8_t          code;      // instruction ID + possible V0_INS_32_BIT-flag
+    uint8_t          parm;      // register operand IDs (if non-zero)
+    struct v0insdata arg[VLA];  // instruction data if present
 };
 
 #if 0

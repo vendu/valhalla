@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <endian.h>
 #include <valhalla/cdefs.h>
+#include <v0/vm/isa.h>
 #include <v0/vm/ins.h>
 
 struct v0;

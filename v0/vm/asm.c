@@ -7,7 +7,6 @@
 #include <limits.h>
 #include <ctype.h>
 #include <stdint.h>
-//#include <zero/trix.h>
 #include <vas/vas.h>
 #include <v0/vm/conf.h>
 #include <v0/vm/isa.h>
@@ -417,7 +416,7 @@ vasprocinst(struct vastoken *token, v0memadr adr,
             vasfreetoken(token2);
         }
     }
-    *retadr = (void *)ins;
+    *retadr = adr;
 
     return retval;
 }
