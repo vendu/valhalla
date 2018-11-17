@@ -28,9 +28,8 @@
  * ----         -----                           -               --------
  * register     operand in a register           val = x;        str %r1, *%r2
  * immediate    operand follows opcode          val = CONST     $const
- * direct       address follows opcode          *ptr = x;       ldr *adr, %r1;
- * indexed      index in val or after opcode    ptr[0xff] = x;  ldr 8(%r1), %r2
  * PC-relative  index in val or after opcode    goto label;     jmp 0xff(%pc)
+ * indexed      index in val or after opcode    ptr[0xff] = x;  ldr 8(%r1), %r2
  *
  * Mnemonics
  * ---------
@@ -173,8 +172,8 @@
 #define V0_BSW 0x1c
 
 /*
- * THREAD AND BRANCH UNIT (FLOW)
- * ----------------------
+ * BRANCH UNIT (BRA)
+ * -----------------
  *
  * Instructions
  * ------------
