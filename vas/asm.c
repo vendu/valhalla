@@ -10,10 +10,10 @@
 
 /* assembler pseudo-machine instruction */
 struct asm {
-    void   *base;               // translation core base address
-    size_t  size;               // core size
-    size_t  nseg;               // # of segments present
-    long   *segflg;             // segment permissions and other flags
-    void   *segtab;
+    void    *core;              // translation core base address
+    size_t   coresize;          // core size
+    size_t   nseg;              // # of segments present
+    long    *segflg;            // segment permissions and other flags
+    void   **segtab;            // section address table
 };
 

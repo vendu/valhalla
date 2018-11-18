@@ -240,7 +240,17 @@
  *
  * SYSTEM OPERATIONS
  * -----------------
- * CTR     0x35    R1 is command, R2 parameter
+ * SCT     0x35    arg1 is command, reg2 parameter
+ *
+ * SCT Commands
+ * -----------
+ *
+ * V0_READ_MSR          read machine-specific register
+ * V0_WRITE_MSR         write machine-specific register
+ * V0_READ_TSC          read timestamp-counter [cycle-counter]
+ * V0_CONF_TMR          configure timer
+ * V0_SEND_INTR         send an interrupt
+ * V0_MASK_INTR         mask interrupts
  */
 /* V0_MULTICORE extensions */
 #define V0_THR 0x30 // launch thread at *reg2, *reg1 = exit-status address
@@ -249,7 +259,8 @@
 #define V0_CPF 0x32 // prefetch [cacheline]
 #define V0_FPG 0x33 // flush a page-TLB entry
 #define V0_FLS 0x34 // flush [write-to-RAM] cacheline
-#define V0_CTR 0x35 // system control operations
+#define V0_SCT 0x35 // system control operations
+
 /*
  * INTERRUPT CONTROL (INTR)
  * ------------------------
@@ -275,9 +286,9 @@
 #define V0_SLP 0x39 // put thread to sleep
 #define V0_WFE 0x3a // wait for event on object/cacheline
 #define V0_SEV 0x3b // signal cacheline event
-#define V0_IRT 0x3c
-#define V0_HLT 0x3d
-#define V0_RST 0x3e
+#define V0_IRT 0x3c // interrupt routine return
+#define V0_HLT 0x3d // halt processor
+#define V0_RST 0x3e // reset processor
 
 /*
  * MEMORY UNIT (MMU)
@@ -302,22 +313,22 @@
  * PSM   0x45    push many registers    // parm lists min and max registers
  * POM   0x46    pop many registers     // parm lists min and max registers
  *
+ * Memory Barriers
+ * ---------------
+ * BAR   0x47    full memory barrier
+ * BRD   0x48    memory read-barrier
+ * BWR   0x49    memory write-barrier
+ *
  * ATOMIC OPERATIONS
  * -----------------
  *
  * [Atomic] Bit-Manipulation
  * -------------------------
- * BTS   0x47    [atomically] test bit and set to 1 if clear/0
- * BTC   0x48    [atomically] test bit and clear/zero if set/1
- * BCL   0x49    [atomically] clear bit
+ * BTS   0x4a    [atomically] test bit and set to 1 if clear/0
+ * BTC   0x4b    [atomically] test bit and clear/zero if set/1
+ * BCL   0x4c    [atomically] clear bit
  * Synchronization
  * ---------------
- *
- * Memory Barriers
- * ---------------
- * BAR   0x4a    full memory barrier
- * BRD   0x4b    memory read-barrier
- * BWR   0x4c    memory write-barrier
  *
  * Load-Link Store Conditional
  * ---------------------------
@@ -337,15 +348,15 @@
 #define V0_POP 0x44 // pop register reg2
 #define V0_PSM 0x45 // push 1 << parm registers starting from val
 #define V0_POM 0x46 // pop 1 << parm registers starting from val
-/* atomic bit-manipulation */
-#define V0_BTS 0x47 // NEW, V0_ATOM_BIT
-#define V0_BTC 0x48 // NEW, V0_ATOM_BIT
-#define V0_BCL 0x49 // NEW, V0_ATOM_BIT
-// clear cacheline ACQ-bit
-#define V0_BAR 0x4a // full [read-write] memory barrier
-#define V0_BRD 0x4b // memory read barrier
-#define V0_BWR 0x4c // memory write barrier
 /* V0_MULTICORE extensions */
+// clear cacheline ACQ-bit
+#define V0_BAR 0x47 // full [read-write] memory barrier
+#define V0_BRD 0x48 // memory read barrier
+#define V0_BWR 0x49 // memory write barrier
+/* atomic bit-manipulation */
+#define V0_BTS 0x4a // NEW, V0_ATOM_BIT
+#define V0_BTC 0x4b // NEW, V0_ATOM_BIT
+#define V0_BCL 0x4c // NEW, V0_ATOM_BIT
 #define V0_LDL 0x4d // V0_ACQ_BIT
 #define V0_STC 0x4e
 #define V0_CAS 0x4f // [atomic] compare and swap [swap if old value as expected)
@@ -359,15 +370,27 @@
  * ICD     0x50    configure I/O device
  * IRC     0X51    read I/O control register
  * IWC     0x52    write I/O control register
- * ILM     0x53    load I/O-map descriptor; map device region
- * IOC     0x54    I/O-command (sel, start, stop, xmit, recv, sync, setf, ack,
- *                 fin
+ *
+ * IOC     0x53    I/O-command (sel, start, stop, xmit, recv, sync, setf, ack,
+ * ILM     0x54    load I/O-map descriptor; map device region
  * IOP     0x55    I/O-permission control
  * BLT     0x56    block transfers using fast transfer such as DMA
+ *
  * BUS     0x57    I/O-bus management
  * COM     0x58    inter-processor and inter-thread communication
  * TAM     0x59    pseudo-transactional memory, cacheline dirty-bitmap
  * SMM     0x5a    system management mode
+ *
+ * ICD Commands
+ * ------------
+ * V0_IO_RESET
+ * V0_IO_PERM
+ * V0_IO_MAP
+ *
+ * IOC Commands
+ * ------------
+ * V0_IO_XMIT
+ * V0_IO_RECV
  *
  * Notes
  * -----
@@ -381,8 +404,8 @@
 #define V0_IRC 0x51
 #define V0_IWC 0x52
 #define V0_ILM 0x53
-#define V0_IOP 0x54
-#define V0_IOC 0x55
+#define V0_IOC 0x54
+#define V0_IOP 0x55
 #define V0_BLT 0x56
 #define V0_BUS 0x57
 #define V0_COM 0x58
@@ -489,7 +512,17 @@
 #define V0_MSW_OF_BIT    (1U << 1)  // overflow
 #define V0_MSW_CF_BIT    (1U << 2)  // carry-flag, return bit for BTR, BTS, BTC
 #define V0_MSW_IF_BIT    (1U << 3)  // interrupts enabled
-#define V0_MSW_SYS_BIT   (1U << 31) // system-mode
+#define V0_MSW_FX_BIT    (1U << 4)  // floating-point exceptions pending
+/* values for MFW- and MSW-registers */
+#define V0_FP_BIT        (1U << 25) // fixed-point support
+#define V0_FC_BIT        (1U << 26) // floating-point coprocessor present
+#define V0_VC_BIT        (1U << 27) // vector coprocessor present
+/* coprocessor flags */
+#define V0_SP_BIT        (1U << 28) // SIMD support
+#define V0_MP_BIT        (1U << 29) // multiprocessor [synchronous] mode
+#define V0_PE_BIT        (1U << 30) // paging enabled (virtual memory)
+/* system-ring bit */
+#define V0_PM_BIT        (1U << 31) // privileged/system mode
 
 #endif /* __V0_VM_ISA_H__ */
 
