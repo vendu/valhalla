@@ -1,9 +1,5 @@
-#ifndef __V0_VM_CONF_H__
-#define __V0_VM_CONF_H__
-
-//#define V0_DEBUG_TABS
-#define V0_PRINT_XCPT
-#define V0_DEBUG_TABS
+#ifndef __V0_CONF_H__
+#define __V0_CONF_H__
 
 #define V0_RAM_SIZE          (8 * _MEGABYTE)
 #define V0_PAGE_SIZE         4096
@@ -22,5 +18,5 @@
 #define V0_NTHR              16
 #endif
 
-#endif /* __V0_VM_CONF_H__ */
+#endif /* __V0_CONF_H__ */
 

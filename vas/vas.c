@@ -23,6 +23,7 @@
 #if (V0)
 #include <v0/vm/conf.h>
 #include <v0/vm/vm.h>
+//#include <v0/vm/types.h>
 #endif
 
 extern struct v0       *v0vm;

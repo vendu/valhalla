@@ -1,0 +1,244 @@
+Addressing Modes
+----------------
+
+Register File
+-------------
+- 16 general purpose registers R0-R15
+- the R0-register, aka ZR, may be used to read all-zero input; writes to ZR
+  shall be quietly ignored
+- the R1-register is used for function return values as well as the first
+  register argument for functions
+- the R2-register provides  another return value for certain instructions, e.g.
+  for returning the remainder when dividing integer values
+- registers R2-R7 are used for the second to seventh function arguments
+- registers R8-R15 are callee-save
+
+Register Value
+--------------
+- operands are stored in a register listed in the opcode
+
+Immediate Value
+---------------
+- operand is stored as a 16-bit or aligned 32-bit value following opcode
+  - op->u.arg16[0] or
+  - op->u.arg32[0] or
+
+PC-Relative Address
+-------------------
+- PC (program counter) register is used as the base and the address is
+  calculated so like
+
+    adr = PC[ndx]
+
+        or in AT&T assembly syntax
+
+    $ndx(%pc)
+
+  where ndx is an immediate 16-bit or 32-bit offset following the opcode
+
+Indexed Address
+---------------
+- an indexed address takes the form of
+
+    adr = reg1[reg2]	// indexed addressing with 2 registers
+
+    	or
+
+    adr = reg1[val]	// indexed address with a register and immediate value
+
+    	or in AT&T assembly syntax
+
+    %r2(%r1)
+
+	and
+
+    $val(%r1)
+
+  where Rb is the base register and Ri is the index register
+
+Notes
+-----
+- a full memory address could be
+
+  ptr[ofs] = 0xffU; // ptr is in a register, val or argument is ofs, so the
+  	            // halfword (16-bit) address becomes ADR = %reg1 + ofs
+
+Mode         Brief                           C               Assembly
+----         -----                           -               --------
+register     operand in a register           val = x;        str %r1, *%r2
+immediate    operand follows opcode          val = CONST     $const
+PC-relative  index in val or after opcode    goto label;     jmp 0xff(%pc)
+indexed      index in val or after opcode    ptr[0xff] = x;  ldr 8(%r1), %r2
+
+Mnemonics
+---------
+- I have chosen to use 3-letter mnemonics so far... instructions for the
+  supplementary units such as floating-point would be 4 letters to emphasize
+  the "external" processor/unit nature of them. for these instructions, I'm
+  thinking of using the following initials in the mnemonics
+  - P - fixed-point mathematics
+  - F - floating-point, e.g. FADD, FMAC (multiply-and-add)
+  - S - SIMD
+  - M - multimedia (audio, graphics, ...)
+  - V - vector
+  - A - audio
+  - D - DSP
+
+Instruction Prefixes
+--------------------
+
+The COP-prefix marks coprocessor instructions
+The MLK-prefix may be used to lock the memory bus for a single operation of
+- NOT, AND, XOR, OR,INC, DEC, ADD, SDC, SUB, SBC, BTR, BTS, BTC, CAS
+
+Fused Instructions
+------------------
+- I'm thinking of doing at least fused shift-and-add as well as multiply-and-
+  add [the last typically for floating-point]
+
+Insruction Set Description
+--------------------------
+
+parm-field
+----------
+r1	register operand 1
+r2	register operand 2
+adr	memory address
+range	first register ID in low, last register ID in high 8 bits of operation
+	parm-field
+
+OP	CODE	PARM		VAL		BRIEF
+--	----	----		---		-----
+/* logical operations */
+V0LOGIC	01
+NOT		ri1, r2		0		bitwise inverse
+AND		ri1, r2		AND		logical AND
+IOR		ri1, r2		OR		logical inclusive OR
+XOR		ri1, r2		OR|XCL		logical exclusive OR
+/* shift operations */
+V0SHIFT	02
+SHL		ri1, r2		0		shift left [logical]
+SHR		ri1, r2		DIR		shift right logical
+SAR		ri1, r2		DIR|ARI		shift right arithmetic
+ROL		ri1, r2		ROT		rotate left
+ROR		ri1, r2		DIR|ROT		rotate right
+/* add operations */)
+V0ADD	03
+ADD		ri1, r2		0		addition
+ADU		ri1, r2		UNS		unsigned addition
+ADC		ri1, r2		FLG		addition with carry
+AUC		ri1, r2		UNS|FLG		unsigned addition with carry
+INC		ri1, r2		INC		increment by one
+DEC		ri1, r2		INC|SUB		decrement by one
+SUB		ri1, r2		SUB		subtraction; ignore underflow
+SBU		ri1, r2		SUB|UNS 	unsigned subtraction
+SBC		ri1, r2		SUB|FLG		subtract with borrow-flag
+SUC		ri1, r2		SUB|UNS|FLG	unsigned subtraction with borrow
+CMP		ri1, r2		SUB|FLG		subtract + set MSW-flags
+/* multiplication instructions */
+V0MUL	04
+MUL		ri1, r2		0		multiplication, returns low word
+MLU		ri1, r2 	UNS		unsigned multiplication
+MLH		ri1, r2		HI		multiplication, high word
+MHU		ri1, r2		UNS|HI		unsigned high multiplication
+DIV		ri1, r2		DIV		division
+DVU		ri1, r2		DIV|UNS		unsigned division
+DIR		ri1, r2		DIV|REM		division with remainder
+DUR		ri1, r2		UNS|DIV|REM 	unsigned division with remainder
+RPS		ri1, r2		RPC		signed inverse reciprocal
+RPU		ri1, r2		UNS|RPC 	unsigned inverse reciprocal
+/* sign extension */
+V0SIGN	05
+SEX		ri1, r2		0
+ZEX		ri1, r2		UNS
+/* miscellaneous operations */
+V0MISC	06
+BSW		ri1, r2		0		byte swap
+CLZ		ri1, r2		CNT		count leading zero-bits
+HAM		ri1, r2		CNT|ONE		count 1-bits (Hamming weight)
+/* memory operations */
+V0MEM	07
+LEA		adr, r2		0		load effective address
+BAR             adr or ~0	RD|WR|BAR	memory barrier
+BRD		adr or ~0	RD|BAR		read barrier
+BWR		adr or ~0	WR|BAR		write barrier
+CPF		adr		RD		cacheline prefetch
+CFL		adr		WR		cacheline flush
+IPG		adr		WR|PG		invalidate page
+LDR		ri1, r2		MEM		load from register
+		ri1, adr	RD|MEM		load from memory
+RFL		ri1  		MSW		read machine status word
+SFL		ri1		WR|MSW		set machine status word
+STR		ri1, adr	WR|MEM		store into memory
+/* stack operations */
+V0STK   08
+PSH		r1		0		push value
+POP		r1		RD		pop value
+PSM		r1, range	N		push range
+POM		r1, range	RD|N		read range
+/* bit operations */
+V0BIT   09
+BTS		ri1, adr	0		bit test-and-set
+BTC		ri1, adr	CLR		bit test-and-clear
+BAS		ri1, adr	SYN		bit set atomic
+BAC		ri1, adr	CLR|SYN		bit clear atomic
+/* atomic memory operations */
+V0ATOM  0a
+LDL		adr, r2		LDR|SYN		load linked
+STC		r1, adr		WR|SYN		store conditional
+CAS		adr, ri1, r2	RD|WR|SYN	compare and swap
+/* branch operations */
+V0JMP	0b
+JMP		adr		0		unconditional jump
+BEQ		adr		EQ		branch if src == dest
+BNE		adr		NE		branch if src != dest
+BLT		adr		LT		branch if src < dest
+BUL		adr		UNS|LT		unsigned branch if src < dest
+BGT		adr		GT		branch if src > dest
+BUG		adr		UNS|GT		unsigned branch if src > dest
+BCB		adr		CB		branch if carry-bit set
+BOF		adr		CO		branch on overflow
+/* subroutine operations */
+V0SUB	0c
+SUB     	ri1, adr	0		call subroutine
+SYS     	adr		SYS		enter system mode
+BEG     	ri1		BEG		function prologue; adjust stack
+FIN     	ri1		FIN		function epilogue; adjust stack
+RET     	ri1		RET		return from subroutine
+SRT     	ri1		RET|SYS		return from system mode
+THR		ri1		THR		launch thread of execution
+THX		ri1, r2		THR|FIN		finish thread
+/* interrupt and system management operations */
+V0SYS	0d
+CLI		N/A  		0
+STI		ri1		ON; mask argument shall be added to signal mask
+ISM		ri1		ON|MSK	set interrupt mask
+IQM		ri1		MSK
+INT		ri1		INT
+SLP     			SLP	sleep/wait for interrupt
+WFE     			SLP|EV	sleep/wait for event
+SEV     			INT|EV
+IRT     			INT|RET
+HLT     			HLT
+RST     			ON|HLT
+/* input-output operations */
+V0IO	0e
+ICF         	ri1, adr   	0		configure I/O-device
+IRC		ri1, r2		RD		read I/O-register
+IWC     	ri1, ri2	WR		write I/O-register
+/* parm: init, sel, blt, ack, syn, fin */
+IOC				CMD	(sel, blt, stop, xmit, recv, sync, setf, ack)
+ILM         	MEM|CMD	load I/O-map descriptor; map device region
+/* system control operations */
+V0CTL	0f
+CTL		ri1, cmd
+				0		READ_MSR
+				1		WRITE_MSR
+				2		READ_TSC
+				3		CONF_TMR
+				4		READ_TMR
+				5		WRITE_TMR
+				6		SEND_INTR
+				7		MASK_INTR
+IRP	0e	ri1, r2				calculate inverse reciprocal
+

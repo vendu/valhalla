@@ -19,10 +19,10 @@
 #include <v0/vm/vm.h>
 #include <vas/vas.h>
 
-#define V0_HALTED                       0xffffffffU // special PC-value
-#define V0_INS_INVAL                    NULL
-#define V0_ADR_INVAL                    0x00000000
-#define V0_CNT_INVAL                    (-1)
+#define V0_HALTED    0xffffffffU        // special PC-register value
+#define V0_INS_INVAL NULL               // invalid instruction
+#define V0_ADR_INVAL 0x00000000
+#define V0_CNT_INVAL (-1)
 
 extern char     *v0insnametab[V0_NINST_MAX];
 extern vasuword  _startadr;

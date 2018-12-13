@@ -1,5 +1,10 @@
-#ifndef __V0_VM_VM_H__
-#define __V0_VM_VM_H__
+#ifndef __V0_VM_H__
+#define __V0_VM_H__
+
+/* compile-time options */
+//#define V0_DEBUG_TABS
+#define V0_PRINT_XCPT
+#define V0_DEBUG_TABS
 
 /* VIRTUAL MACHINE */
 
@@ -7,15 +12,13 @@
 #define V0_ROOT_GID 0
 #define V0_NO_ACL   0
 
-#include <v0/vm/conf.h>
+#include <v0/conf.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <endian.h>
 #include <valhalla/cdefs.h>
-#include <v0/vm/isa.h>
-#include <v0/vm/ins.h>
-
-struct v0;
+#include <v0/isa.h>
+#include <v0/ins.h>
 
 /* type is one of V0_EXEC_PERM, V0_WRITE_PERM, or V0_READ_PERM */
 #define v0chkperm(cred, perm, type)                                     \
@@ -49,66 +52,30 @@ struct v0;
      : (((cred)->usr == (perm)->uid || (cred)->grp == (perm)->gid)      \
         && (perm)->flg & V0_IO_SYN_BIT))
 
-typedef int64_t  v0wreg; // full-width register (temporary values)
-typedef int32_t  v0reg;  // signed user-register type
-typedef uint32_t v0ureg; // unsigned user-register type
-typedef v0ureg   v0memadr; // memory address
-typedef v0ureg   v0pagedesc;
-typedef void     v0iofunc_t(struct v0 *vm, uint8_t port, v0reg reg);
-
 struct v0iofuncs {
-    v0iofunc_t *rdfunc;
-    v0iofunc_t *wrfunc;
-};
-
-/* I/O credential structure */
-struct v0iocred {
-    uint32_t uid;       // [owner] user ID
-    uint32_t gid;       // [owner] group ID
-    uint32_t usr;       // object user ID
-    uint32_t grp;       // object group ID
+    v0iofunc *rdfunc;
+    v0iofunc *wrfunc;
 };
 
 /* permission bits for v0chkperm() type-argument */
-#define V0_EXEC_PERM  1
-#define V0_WRITE_PERM 2
-#define V0_READ_PERM  4
-
-/* execute, write, and read permissions for user, group, all */
-#define V0_IO_AX_BIT  (V0_EXEC_PERM << 0)
-#define V0_IO_AW_BIT  (V0_WRITE_PERM << 0)
-#define V0_IO_AR_BIT  (V0_READ_PERM << 0)
-#define V0_IO_GX_BIT  (V0_EXEC_PERM << 3)
-#define V0_IO_GW_BIT  (V0_WRITE_PERM << 3)
-#define V0_IO_GR_BIT  (V0_READ_PERM << 3)
-#define V0_IO_UX_BIT  (V0_EXEC_PERM << 6)
-#define V0_IO_UW_BIT  (V0_WRITE_PERM << 6)
-#define V0_IO_UR_BIT  (V0_READ_PERM << 6)
+#define V0_EXEC_PERM  0x0001
+#define V0_WRITE_PERM 0x0002
+#define V0_READ_PERM  0x0004
 /* user-space access control bit */
-#define V0_IO_USR_BIT 0x04000000
-/* map-permission */
-#define V0_IO_MAP_BIT 0x08000000
+#define V0_IO_USR_BIT 0x0008
 /* share-permission */
-#define V0_IO_SHM_BIT 0x10000000
-/* buffer-cache block */
-#define V0_IO_BUF_BIT 0x20000000
-/* synchronous I/O */
-#define V0_IO_SYN_BIT 0x40000000
-/* ACL for permissions */
-#define V0_IO_ACL_BIT 0x80000000
-struct v0acl {
-    uint32_t uid;       // user ID
-    uint32_t gid;       // group ID
-    uint32_t flg;       // permission bits
-    uint32_t list;      // next ^ prev control objects in list or NULL
-};
+#define V0_IO_SHM_BIT 0x0010
+/* buffered/combined I/O operations */
+#define V0_IO_BUF_BIT 0x0020
+#define V0_IO_SYN_BIT 0x0040
+
+typedef uint16_t v0ioperm;
 
 struct v0iodesc {
-    uint32_t        adr;        // mapped I/O-address
-    uint32_t        lim;        // last mapped byte address
-    uint32_t        flg;        // permission and other flag-bits
-    uint32_t        acl;        // optional ACL base address or NULL
-    struct v0iocred cred;       // access credentials
+    v0memadr adr;       // mapped I/O-address
+    v0memadr lim;       // last mapped byte address
+    v0ioperm perm;      // permission flags
+    uint8_t  _pad[V0_CACHE_LINE_SIZE - 2 * sizeof(v0memadr) - sizeof(v0ioperm)];
 };
 
 /* program segments */
@@ -134,7 +101,8 @@ struct v0iodesc {
 #define v0zfset(vm)      ((vm)->regs[V0_MSW_REG] & V0_MSW_ZF_BIT)
 #define v0ofset(vm)      ((vm)->regs[V0_MSW_REG] & V0_MSW_OF_BIT)
 #define v0ifset(vm)      ((vm)->regs[V0_MSW_REG] & V0_MSW_IF_BIT)
-
+#define v0setreg(vm, op, val)                                           \
+    ((vm)->regs[v0insreg(op, 0)] = (val))
 struct v0seg {
     v0ureg   id;
     v0memadr base;
@@ -170,22 +138,13 @@ struct v0 {
 #define V0_MEM_STACK     0x80   // segment grows downward in core
 
 #define V0_VTD_PATH      "vtd.txt"
-/* predefined I/O ports */
-#define V0_STDIN_PORT    0 // keyboard input
-#define V0_STDOUT_PORT   1 // console or framebuffer output
-#define V0_STDERR_PORT   2 // console or framebuffer output
-#define V0_RTC_PORT      3 // real-time clock
-#define V0_TMR_PORT      4 // high-resolution timer for profiling
-#define V0_MOUSE_PORT    5 // mouse input
-#define V0_VTD_PORT      6 // virtual tape drive
-#define V0_MAP_PORT      7 // memory-mapped device control
 
 /* framebuffer graphics interface */
 #define V0_FB_BASE       (3UL * 1024 * 1024 * 1024)      // base address
 
 /* traps (exceptions and interrupts) - lower number means higher priority */
 
-#define V0_NTRAP         256
+#define V0_TRAPS_MAX     256
 
 /* USER [programmable] traps */
 #define v0trapisuser(t)  (((t) & V0_SYS_TRAP_BIT) == 0)
@@ -234,5 +193,5 @@ struct v0insinfo {
 struct v0 * v0init(struct v0 *vm);
 void        v0disasm(struct v0 *vm, struct v0ins *ins, v0ureg pc);
 
-#endif /* __V0_VM_VM_H__ */
+#endif /* __V0_VM_H__ */
 

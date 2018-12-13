@@ -9,7 +9,7 @@
  */
 
 /* assembler pseudo-machine instruction */
-struct asm {
+struct vas {
     void    *core;              // translation core base address
     size_t   coresize;          // core size
     size_t   nseg;              // # of segments present
