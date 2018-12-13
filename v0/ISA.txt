@@ -1,8 +1,11 @@
-Addressing Modes
-----------------
+V0 INSTRUCTION SET ARCHITECTURE
+-------------------------------
 
 Register File
 -------------
+
+User Registers
+--------------
 - 16 general purpose registers R0-R15
 - the R0-register, aka ZR, may be used to read all-zero input; writes to ZR
   shall be quietly ignored
@@ -12,6 +15,49 @@ Register File
   for returning the remainder when dividing integer values
 - registers R2-R7 are used for the second to seventh function arguments
 - registers R8-R15 are callee-save
+
+Name	Brief
+----	-----
+R0|RZ	zero-register; reads return 0, writes shall be ignored
+R1	caller-save register #1, function argument #1, function return value
+R2	function argument #2, function return high value
+R3	function argument
+R4	function argument
+R5	function argument
+R6	function argument
+R7	function argument
+R8	callee-save/scratch register #1
+R9	scratch register
+R10	scratch register
+R11	scratch register
+R12	scratch register
+R13	scratch register
+R14	scratch register
+R15	scratch register
+
+System Registers
+----------------
+- some of these registers may be accessed with special instructions
+- some of the system registers cannot be accessed directly
+
+ID	Name	Brief
+--	----	-----
+0	CR	control register
+1	MFW	machine feature word
+2	MSW	machine status word
+3	PC	program counter/instruction pointer
+4	FP	frame pointer to stack
+5	SP	stack pointer
+6	TR	task register; thread-local storage region address
+7	IV	interrupt vector; table base address
+8	IM	interrupt mask; 1-bits denote masked interrupts, default 0
+9	PD	page-directory base address
+10	CL	cacheline-bitmap base address
+11	IO	I/O descriptor map page-address + flags
+15	LN	link register, i.e. return address back to caller
+
+Addressing Modes
+----------------
 
 Register Value
 --------------
