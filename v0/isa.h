@@ -163,17 +163,5 @@
 /* system-ring bit */
 #define V0_PM_BIT        (1U << 31) // privileged/system mode
 
-struct v0callctx {
-    v0reg fp; // copy of FP (frame pointer)
-    v0reg r1; // registers R1 through R7
-    v0reg r2;
-    v0reg r3;
-    v0reg r4;
-    v0reg r5;
-    v0reg r6;
-    v0reg r7;
-    v0reg ln; // return address back to caller
-};
-
 #endif /* __V0_ISA_H__ */
 

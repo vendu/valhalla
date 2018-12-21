@@ -16,27 +16,9 @@
  * - immediate operands following 32-bit instructions are always 32-bit
  */
 
-#define V0_PARM_MASK       0x0f
-#define V0_ADR_MASK        0xf0 // addressing mode ival
-/* addressing modes */
-/* register addressing is detected with nonzero (op->reg) */
-#define V0_REG_ADR         0x00 // register operands
-#define V0_IMM_ADR         0x10 // operand follows opcode, e.g. op->arg[0].i32
-#define V0_PIC_ADR         0x20 // PC-relative, i.e. x(%pc) for shared objects
-#define V0_NDX_ADR         0x30 // indexed, i.e. %r1(%r2) or $c1(%r2)
-/* else indexed: pc[ndx << op->parm], ndx follows opcode */
-/* imm16- and imu16- immediate fields */
-#define V0_IMM16_VAL_MAX   0x7fff
-#define V0_IMM16_VAL_MIN   (-0x7fff - 1)
-#define V0_IMU16_VAL_MAX   0xffffU
-#define V0_IMU16_VAL_MIN   0U
-
-#define V0_INS_CODE_BITS   8
-#define V0_INS_IMMED_BIT   (1 << (V0_INS_CODE_BITS - 1)) // 16-bit value
-#define V0_INS_ALIGN_BIT   (1 << (V0_INS_CODE_BITS - 2)) // aligned value
 #define V0_INS_REG_BITS    4
 #define V0_INS_REG_MASK    ((1 << V0_INS_REG_BITS) - 1)
-#define vogetinsval(ins)   ((ins)->arg.parm.val & 0x2f)
+#define vogetinsval(ins)   ((ins)->arg.parm.val & V0_PARM_MASK)
 /* NOP is declared as all 0-bits */
 #define V0_NOP_CODE        (UINT16_C(0))
 #define V0_COP_CODE        0xff
@@ -51,111 +33,120 @@
 #define v0isnop(ins)       (*(uint8_t *)(ins) == V0_NOP_CODE)
 #define v0coprocid(ins)    (((uint8_t *)(ins))[1])
 #define v0getcode(ins)     ((ins)->code)
-#define v0getreg(ins, id)  (((ins)->parm >> (4 * id)) & V0_INS_REG_MASK)
-#define v0getofs(ins)      (v0imm16(ins))
-#define v0getimm16(ins)    ((ins)->u.arg16[0].i16)
-#define v0getimmu16(ins)   ((ins)->u.arg16[0].u16)
-#define v0getadrmode(ins)  ((ins)->u.arg16[0].op.parm & V0_ADR_MASK)
 #define v0getxreg(ins)     ((ins)->arg[0].op.val)
 #define v0getval(ins)      ((ins)->arg[0].op.val)
 #define v0setreg(ins, reg, id)                                          \
     ((ins)->parm |= (reg) << (4 * (id)))
 #define v0setxreg(ins, reg)                                             \
     ((ins)->u.arg16[0].op.val = (reg))
-#define v0setaln(ins, reg)                                              \
-    ((ins)->u.arg32 = roundup2(ins, 4))
 
 /* values for the val-field; GEN */
+/* common flags */
+#define V0_UNS_BIT  (1U << 0)
+#define V0_FLG_BIT  (1U << 1)
+#define V0_MSW_BIT  (1U << 2)
 /* logical operations */
-#define V0_AND_BIT (1U << 0)
-#define V0_OR_BIT  (1U << 1)
-#define V0_XCL_BIT (1U << 2)
+#define V0_AND_BIT  (1U << 0)
+#define V0_EXC_BIT  (1U << 0)
+#define V0_OR_BIT   (1U << 1)
 /* shift operations */
-#define V0_DIR_BIT (1U << 0)
-#define V0_ARI_BIT (1U << 1)
-#define V0_ROT_BIT (1U << 2)
+#define V0_DIR_BIT  (1U << 0)
+#define V0_ARI_BIT  (1U << 1)
+#define V0_ROT_BIT  (1U << 2)
 /* add operations */
-#define V0_UNS_BIT (1U << 0)
-#define V0_FLG_BIT (1U << 1)
-#define V0_INC_BIT (1U << 2)
-#define V0_SUB_BIT (1U << 3)
+#define V0_DEC_BIT  (1U << 0)
+#define V0_INC_BIT  (1U << 2)
+#define V0_CMP_BIT  (1U << 2)
+#define V0_SUB_BIT  (1U << 3)
 /* multiplication operations */
-#define V0_DIV_BIT (1U << 1)
-#define V0_HI_BIT  (1U << 1)
-#define V0_REM_BIT (1U << 2)
-#define V0_RPC_BIT (1U << 3)
+#define V0_REM_BIT  (1U << 1)
+#define V0_HI_BIT   (1U << 1)
+#define V0_DIV_BIT  (1U << 2)
+#define V0_RPC_BIT  (1U << 3)
 /* bit operations */
-#define V0_CNT_BIT (1U << 0)
-#define V0_ONE_BIT (1U << 1)
+#define V0_CLR_BIT  (1U << 0)
+#define V0_ODD_BIT  (1U << 0)
+#define V0_ONE_BIT  (1U << 0)
+#define V0_DCD_BIT  (1U << 0)
+#define V0_CNT_BIT  (1U << 1)
+#define V0_PAR_BIT  (1U << 2)
+#define V0_BCD_BIT  (1U << 2)
+#define V0_CRC_BIT  (1U << 3)
+#define V0_COND_BIT (1U << 3)
 /* memory operations */
-#define V0_RD_BIT  (1U << 0)
-#define V0_WR_BIT  (1U << 1)
-#define V0_N_BIT   (1U << 1)
-#define V0_MEM_BIT (1U << 2)
-#define V0_BAR_BIT (1U << 3)
-#define V0_PG_BIT  (1U << 4)
-#define V0_MSW_BIT (1U << 5)
+#define V0_RD_BIT   (1U << 0)
+#define V0_REG_BIT  (1U << 1)
+#define V0_WR_BIT   (1U << 1)
+#define V0_N_BIT    (1U << 1)
+#define V0_CL_BIT   (1U << 2)
+#define V0_BAR_BIT  (1U << 3)
+//#define V0_PG_BIT   (1U << 4)
 /* atomic operations */
-#define V0_LDR_BIT (1U << 2)
-#define V0_CLR_BIT (1U << 3)
-#define V0_SYN_BIT (1U << 4)
-/* values for the branch unit (BRA) */
-#define V0_EQ_BIT  (1U << 1)
-#define V0_NE_BIT  (1U << 2)
-#define V0_LT_BIT  (1U << 3)
-#define V0_GT_BIT  (1U << 4)
-#define V0_BC_BIT  (1U << 5)
-#define V0_BO_BIT  (1U << 6)
+#define V0_SYN_BIT  (1U << 0)
+#define V0_DBL_BIT  (1U << 0)
+#define V0_CAS_BIT  (1U << 1)
+#define V0_BT_BIT   (1U << 2)
+/* values for the branch unit  (FLOW) */
+#define V0_BOF_BIT  (1U << 0)
+#define V0_EQ_BIT   (1U << 0)
+#define V0_NE_BIT   (1U << 1)
+#define V0_LT_BIT   (1U << 2)
+#define V0_GT_MASK  0x06
+#define V0_BFL_BIT  (1U << 3)
 /* subroutines */
-#define V0_SYS_BIT (1U << 0)
-#define V0_BEG_BIT (1U << 1)
-#define V0_FIN_BIT (1U << 2)
-#define V0_RET_BIT (1U << 3)
-#define V0_THR_BIT (1U << 4)
+#define V0_TERM_BIT (1U << 0)
+#define V0_FIN_BIT  (1U << 0)
+#define V0_SYS_BIT  (1U << 0)
+#define V0_SUB_BIT  (1U << 1)
+#define V0_RET_BIT  (1U << 2)
+#define V0_THR_BIT  (1U << 3)
 /* interrupt management */
-#define V0_ON_BIT  (1U << 0)
-#define V0_MSK_BIT (1U << 1)
-#define V0_INT_BIT (1U << 2)
-#define V0_SLP_BIT (1U << 3)
-#define V0_EV_BIT  (1U << 4)
-#define V0_HLT_BIT (1U << 5)
+#define V0_ON_BIT   (1U << 0)
+#define V0_RST_BIT  (1U << 0)
+#define V0_MSK_BIT  (1U << 1)
+#define V0_INT_BIT  (1U << 2)
+#define V0_EV_BIT   (1U << 3)
+#define V0_HLT_MASK 0x06
+/* I/O control */
+#define V0_MAP_BIT  (1U << 0)
+#define V0_IR_BIT   (1U << 1)
+#define V0_CMD_BIT  (1U << 2)
 
-/*
- * 32-bit little-endian argument parcel
- * - declared as union, 32-bit aligned
- */
-union v0imm32 {
-    v0ureg   adr;
-    v0ureg   uval;
-    v0reg    val;
-    v0reg    ofs;
-    int32_t  i32;
-    uint32_t u32;
-    int16_t  i16;
-    uint16_t u16;
-    int8_t   i8;
-    uint8_t  u8;
-};
+#define v0getreg1(vm, ins)    ((vm)->regs[(ins)->regs & 0x0f])
+#define v0getreg2(vm, ins)    ((vm)->regs[((ins)->regs >> 4) & 0x0f])
+#define v0getreg(vm, reg)     (((v0reg *)(vm)->regs)[(reg)])
+#define v0getureg(vm, reg)    (((v0ureg *)(vm)->regs)[(reg)])
+#define v0setreg(vm, reg, u)  (((v0reg *)(vm)->regs)[(reg)] = (u))
+#define v0setureg(vm, reg, u) (((v0ureg *)(vm)->regs)[(reg)] = (u))
+#define v0getofs(vm, ins)     (((ins)->flg & V0_IMM_BIT)                \
+                               ? (ins)->imm[0].ofs                      \
+                               : 0)
+#define v0getimm(ins)         ((ins)->imm[0].val)
+#define v0getimmu(ins)        ((ins)->imm[0].uval)
+static __inline__ v0reg
+v0decadr1(struct v0 *vm, struct v0ins *ins)
+{
+    v0reg adr = ((ins)->flg & V0_REG_ADR) ? v0getreg1(vm, ins) : 0;
+    v0reg ofs = ((ins)->flg & V0_PIC_ADR) ? v0getreg(vm, V0_PC_REG) : 0;
+    v0reg imm = ((ins)->flg & V0_IMM_BIT) ? v0getofs(ins) : 0;
 
-#define v0getadrmode(ins) ((long)((ins)->arg[0].info.parm & V0_ADR_MASK))
-struct v0op {
-    uint8_t parm;
-    uint8_t val;
-};
+    adr += ofs;
+    adr += imm;
 
-union v0arg16 {
-    struct v0op op;
-    int16_t     i16;
-    uint16_t    u16;
-};
+    return adr;
+}
 
-struct v0ins {
-    uint8_t            code;    // instruction ID + possible V0_INS_32_BIT-flag
-    uint8_t            parm;    // register operand IDs (if non-zero)
-    union {
-        union v0arg16  arg[VLA]; // instruction argument if present
-        union v0arg32 *aln;      // aligned 32-bit word following opcode
-};
+v0decadr2(struct v0 *vm, struct v0ins *ins)
+{
+    v0reg adr = ((ins)->flg & V0_REG_ADR) ? v0getreg2(vm, ins) : 0;
+    v0reg ofs = ((ins)->flg & V0_PIC_ADR) ? v0getreg(vm, V0_PC_REG) : 0;
+    v0reg imm = ((ins)->flg & V0_IMM_BIT) ? v0getofs(ins) : 0;
+
+    adr += ofs;
+    adr += imm;
+
+    return adr;
+}
 
 #endif /* __V0_VM_INS_H__ */
 

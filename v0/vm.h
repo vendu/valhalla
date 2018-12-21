@@ -1,197 +1,127 @@
-#ifndef __V0_VM_H__
-#define __V0_VM_H__
+#ifndef __V0__INS_H__
+#define __V0__INS_H__
 
-/* compile-time options */
-//#define V0_DEBUG_TABS
-#define V0_PRINT_XCPT
-#define V0_DEBUG_TABS
-
-/* VIRTUAL MACHINE */
-
-#define V0_ROOT_UID 0
-#define V0_ROOT_GID 0
-#define V0_NO_ACL   0
-
-#include <v0/conf.h>
-#include <stdio.h>
 #include <stdint.h>
-#include <endian.h>
 #include <valhalla/cdefs.h>
-#include <v0/isa.h>
-#include <v0/ins.h>
+#include <valhalla/param.h>
+#include <v0/types.h>
 
-/* type is one of V0_EXEC_PERM, V0_WRITE_PERM, or V0_READ_PERM */
-#define v0chkperm(cred, perm, type)                                     \
-    (!(usr)                                                             \
-     ? 1                                                                \
-     : (((cred)->usr == (perm)->uid                                     \
-         && ((perm)->flg & ((type) << 6)))                              \
-        ? 1                                                             \
-        : (((cred)->grp == (perm)->gid                                  \
-            && ((perm)->flg & ((type) << 3)))                           \
-           ? 1                                                          \
-           : ((perm)->flg & (type)))))
-#define v0chkmap(cred, perm)                                            \
-    (!(usr)                                                             \
-     ? 1                                                                \
-     : (((cred)->usr == (perm)->uid || (cred)->grp == (perm)->gid)      \
-        && (perm)->flg & V0_IO_MAP_BIT))
-#define v0chkshm(cred, perm)                                            \
-    (!(usr)                                                             \
-     ? 1                                                                \
-     : (((cred)->usr == (perm)->uid || (cred)->grp == (perm)->gid)      \
-        && (perm)->flg & V0_IO_SHM_BIT))
-#define v0chkbuf(cred, perm)                                            \
-    (!(usr)                                                             \
-     ? 1                                                                \
-     : (((cred)->usr == (perm)->uid || (cred)->grp == (perm)->gid)      \
-        && (perm)->flg & V0_IO_BUF_BIT))
-#define v0chksyn(cred, perm)                                            \
-    (!(usr)                                                             \
-     ? 1                                                                \
-     : (((cred)->usr == (perm)->uid || (cred)->grp == (perm)->gid)      \
-        && (perm)->flg & V0_IO_SYN_BIT))
+/* INSTRUCTION FORMAT */
+/*
+ * - the shortest instructions (2 register operands, no special functionality)
+ *   are 16-bit
+ *   - the high bit (0x80) of the opcode is used to denote there's another 16-
+ *     bit instruction parcel to follow
+ * - instructions are always fetched as 64-bit or 32-bit chunks
+ * - immediate operands following 32-bit instructions are always 32-bit
+ */
 
-struct v0iofuncs {
-    v0iofunc *rdfunc;
-    v0iofunc *wrfunc;
-};
+#define V0_PARM_MASK       0x0f
+#define V0_ADR_MASK        0xf0 // addressing mode ival
+/* addressing modes */
+/* register addressing is detected with nonzero (op->reg) */
+#define V0_REG_ADR         0x00 // register operands
+#define V0_IMM_ADR         0x10 // operand follows opcode, e.g. op->arg[0].i32
+#define V0_PIC_ADR         0x20 // PC-relative, i.e. x(%pc) for shared objects
+#define V0_NDX_ADR         0x30 // indexed, i.e. %r1(%r2) or $c1(%r2)
+/* else indexed: pc[ndx << op->parm], ndx follows opcode */
+/* imm16- and imu16- immediate fields */
+#define V0_IMM16_VAL_MAX   0x7fff
+#define V0_IMM16_VAL_MIN   (-0x7fff - 1)
+#define V0_IMU16_VAL_MAX   0xffffU
+#define V0_IMU16_VAL_MIN   0U
 
-/* permission bits for v0chkperm() type-argument */
-#define V0_EXEC_PERM  0x0001
-#define V0_WRITE_PERM 0x0002
-#define V0_READ_PERM  0x0004
-/* user-space access control bit */
-#define V0_IO_USR_BIT 0x0008
-/* share-permission */
-#define V0_IO_SHM_BIT 0x0010
-/* buffered/combined I/O operations */
-#define V0_IO_BUF_BIT 0x0020
-#define V0_IO_SYN_BIT 0x0040
+#define V0_INS_CODE_BITS   8
+#define V0_INS_IMM32_BIT   (1 << (V0_INS_CODE_BITS - 1)) // aligned value
+#define V0_INS_IMM16_BIT   (1 << (V0_INS_CODE_BITS - 2)) // 16-bit value
+#define V0_INS_REG_BITS    4
+#define V0_INS_REG_MASK    ((1 << V0_INS_REG_BITS) - 1)
+#define vogetinsval(ins)   ((ins)->arg.parm.val & 0x2f)
+/* NOP is declared as all 0-bits */
+#define V0_NOP_CODE        (UINT16_C(0))
+#define V0_COP_CODE        0xff
+/* instruction prefixes have all 1-bits in code */
+#define V0_SYS_CODE        (UINT16_C(~0))
+/* predefined coprocessor IDs in val-field after 0xff-opcode */
+#define V0_COPROC_FPM      0x01 // fixed-point
+#define V0_COPROC_FPU      0x02 // floating-point unit
+#define V0_COPROC_SIMD     0x03 // SIMD-unit
+#define V0_COPROC_VEC      0x04 // vector processor
+#define V0_COPROC_DSP      0x05 // digital signal processor
+#define v0isnop(ins)       (*(uint8_t *)(ins) == V0_NOP_CODE)
+#define v0coprocid(ins)    (((uint8_t *)(ins))[1])
+#define v0getcode(ins)     ((ins)->code)
+#define v0getxreg(ins)     ((ins)->arg[0].op.val)
+#define v0getval(ins)      ((ins)->arg[0].op.val)
+#define v0setreg(ins, reg, id)                                          \
+    ((ins)->parm |= (reg) << (4 * (id)))
+#define v0setxreg(ins, reg)                                             \
+    ((ins)->u.arg16[0].op.val = (reg))
 
-typedef uint16_t v0ioperm;
+/* values for the val-field; GEN */
+/* common flags */
+#define V0_ZERO_BIT (1U << 0)
+#define V0_UNS_BIT  (1U << 0)
+#define V0_FLG_BIT  (1U << 1)
+#define V0_MSW_BIT  (1U << 2)
+/* logical operations */
+#define V0_AND_BIT  (1U << 0)
+#define V0_OR_BIT   (1U << 1)
+#define V0_EXC_BIT  (1U << 2)
+/* shift operations */
+#define V0_DIR_BIT  (1U << 0)
+#define V0_ARI_BIT  (1U << 1)
+#define V0_ROT_BIT  (1U << 2)
+/* add operations */
+#define V0_INC_BIT  (1U << 2)
+#define V0_SUB_BIT  (1U << 3)
+/* multiplication operations */
+#define V0_REM_BIT  (1U << 1)
+#define V0_DIV_BIT  (1U << 2)
+#define V0_RPC_BIT  (1U << 3)
+/* bit operations */
+#define V0_CNT_BIT  (1U << 0)
+#define V0_ONE_BIT  (1U << 1)
+/* memory operations */
+#define V0_RD_BIT   (1U << 0)
+#define V0_REG_BIT  (1U << 1)
+#define V0_WR_BIT   (1U << 1)
+#define V0_N_BIT    (1U << 1)
+#define V0_MEM_BIT  (1U << 2)
+#define V0_CL_BIT   (1U << 2)
+#define V0_BAR_BIT  (1U << 3)
+#define V0_MSW_MASK 0x0a
+//#define V0_PG_BIT   (1U << 4)
+/* atomic operations */
+#define V0_CLR_BIT  (1U << 0)
+#define V0_DUAL_BIT (1U << 0)
+#define V0_CAS_BIT  (1U << 1)
+#define V0_SYN_MASK 0x06
+/* values for the branch unit  (BRA) */
+#define V0_EQ_BIT   (1U << 0)
+#define V0_NE_BIT   (1U << 1)
+#define V0_LT_BIT   (1U << 2)
+#define V0_GT_BIT   (1U << 3)
+#define V0_BC_BIT   (1U << 4)
+#define V0_BO_BIT   (1U << 5)
+#define V0_BCS_MASK 0x06
+#define V0_BOS_MASK 0x07
+/* subroutines */
+#define V0_TERM_BIT (1U << 0)
+#define V0_SYS_BIT  (1U << 1)
+#define V0_RET_BIT  (1U << 2)
+#define V0_THR_BIT  (1U << 3)
+/* interrupt management */
+#define V0_ON_BIT   (1U << 0)
+#define V0_RST_BIT  (1U << 0)
+#define V0_MSK_BIT  (1U << 1)
+#define V0_INT_BIT  (1U << 2)
+#define V0_EV_BIT   (1U << 3)
+#define V0_HLT_MASK 0x06
+/* I/O control */
+#define V0_CMD_BIT  (1U << 2)
+#define V0_RM_CMD   1
+#define V0_CP_CMD   2
 
-struct v0iodesc {
-    v0memadr adr;       // mapped I/O-address
-    v0memadr lim;       // last mapped byte address
-    v0ioperm perm;      // permission flags
-    uint8_t  _pad[V0_CACHE_LINE_SIZE - 2 * sizeof(v0memadr) - sizeof(v0ioperm)];
-};
-
-/* program segments */
-#define V0_TRAP_SEG      0x00
-#define V0_CODE_SEG      0x01 // code
-#define V0_RODATA_SEG    0x02 // read-only data such as literals
-#define V0_DATA_SEG      0x03 // read-write (initialised) data
-#define V0_KERN_SEG      0x04 // code to implement system [call] interface
-#define V0_STACK_SEG     0x05
-#define V0_SEGS          8
-#if 0
-/* option-bits for flg-member */
-#define V0_TRACE         0x01
-#define V0_PROFILE       0x02
-#endif
-
-#define v0clrmsw(vm)     ((vm)->regs[V0_MSW_REG] = 0)
-#define v0setcf(vm)      ((vm)->regs[V0_MSW_REG] |= V0_MSW_CF_BIT)
-#define v0setzf(vm)      ((vm)->regs[V0_MSW_REG] |= V0_MSW_ZF_BIT)
-#define v0setof(vm)      ((vm)->regs[V0_MSW_REG] |= V0_MSW_OF_BIT)
-#define v0setif(vm)      ((vm)->regs[V0_MSW_REG] |= V0_MSW_IF_BIT)
-#define v0cfset(vm)      ((vm)->regs[V0_MSW_REG] & V0_MSW_CF_BIT)
-#define v0zfset(vm)      ((vm)->regs[V0_MSW_REG] & V0_MSW_ZF_BIT)
-#define v0ofset(vm)      ((vm)->regs[V0_MSW_REG] & V0_MSW_OF_BIT)
-#define v0ifset(vm)      ((vm)->regs[V0_MSW_REG] & V0_MSW_IF_BIT)
-#define v0setreg(vm, op, val)                                           \
-    ((vm)->regs[v0insreg(op, 0)] = (val))
-struct v0seg {
-    v0ureg   id;
-    v0memadr base;
-    v0memadr lim;
-    v0ureg   perm;
-};
-
-struct v0 {
-    v0reg             regs[V0_INT_REGS + V0_SYS_REGS];
-  //    struct v0seg      segs[V0_SEGS];
-    long              flg;
-    v0pagedesc       *membits;
-    char             *mem;
-    size_t            memsize;
-    struct v0iofuncs *iovec;
-    FILE             *vtdfp;
-    char             *vtdpath;
-    struct divuf16   *divu16tab;
-};
-
-#define v0adrtoptr(vm, adr)  ((void *)(&(vm)->mem[(adr)]))
-#define v0regtoptr(vm, reg)  ((void *)(&(vm)->regs[(reg)]))
-
-/* memory parameters */
-#define V0_MEM_TRAP      0x00   // traditionally, interrupt-vector @ 0x00000000
-#define V0_MEM_EXEC      0x01   // execute-permission
-#define V0_MEM_WRITE     0x02   // write-permission
-#define V0_MEM_READ      0x04   // read-permission
-#define V0_MEM_PRESENT   0x08   // memory present in physical core
-#define V0_MEM_MAP       0x10   // memory may be mapped across multiple users
-#define V0_MEM_SYS       0x20   // system code
-#define V0_MEM_TLS       0x40   // thread-local storage
-#define V0_MEM_STACK     0x80   // segment grows downward in core
-
-#define V0_VTD_PATH      "vtd.txt"
-
-/* framebuffer graphics interface */
-#define V0_FB_BASE       (3UL * 1024 * 1024 * 1024)      // base address
-
-/* traps (exceptions and interrupts) - lower number means higher priority */
-
-#define V0_TRAPS_MAX     256
-
-/* USER [programmable] traps */
-#define v0trapisuser(t)  (((t) & V0_SYS_TRAP_BIT) == 0)
-#define v0trapissys(t)   ((t) & V0_SYS_TRAP_BIT)
-#define V0_BREAK_POINT   0x00 // debugging breakpoint; highest priority
-#define V0_TMR_INTR      0x01 // timer interrupt
-#define V0_KBD_INTR      0x02 // keyboard
-#define V0_PTR_INTR      0x03 // mouse, trackpad, joystick, ...
-#define V0_PAGE_FAULT    0x04 // reserved for later use (paging); adr | bits
-#define V0_FAST_INTR     0x1f // fast interrupts
-#define V0_SYS_TRAP_BIT  0x20 // denotes system interrupts
-#define V0_SYS_TRAP_MAX  0x3f // maximum system interrupt number
-#define V0_TRAPS         64
-#define V0_USR_TRAP_MASK 0x1f
-
-/* SYSTEM TRAPS */
-/* aborts */
-#define V0_ABORT_TRAP    0x20 // traps that terminate the process
-/* memory-related violations */
-#define V0_STACK_FAULT   0x10 // stack segment limits exceeded; adr
-#define V0_TEXT_FAULT    0x10 // invalid address for instruction; adr
-#define V0_INV_MEM_READ  0x11 // memory read error; push address
-#define V0_INV_MEM_WRITE 0x12 // memory write error
-#define V0_INV_MEM_ADR   0x13 // invalid memory address; segment violation
-/* instruction-related problems */
-/* instruction format violations - terminate process */
-#define V0_INV_INS_CODE  0x20 // invalid instruction; code
-#define V0_INV_INS_ARG   0x21 // invalid argument; (type << 1) | num
-#define V0_INV_INS_ADR   0x22 // invalid addressing-mode for instruction
-/* I/O-related exceptions */
-#define V0_IO_TRAP       0x20 // I/O traps
-#define V0_INV_IO_READ   0x20 // no permission to read from input port; port
-#define V0_INV_IO_WRITE  0x21 // no permission to write to input port; port
-/* programmatic errors */
-#define V0_PROG_TRAP     0x30
-#define V0_DIV_BY_ZERO   0x30 // division by zero - terminate process
-
-/* debugging */
-
-struct v0insinfo {
-    char *unit;
-    char *op;
-    char *func;
-};
-
-struct v0 * v0init(struct v0 *vm);
-void        v0disasm(struct v0 *vm, struct v0ins *ins, v0ureg pc);
-
-#endif /* __V0_VM_H__ */
+#endif /* __V0__INS_H__ */
 

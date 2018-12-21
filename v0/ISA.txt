@@ -56,18 +56,56 @@ ID	Name	Brief
 11	IO	I/O descriptor map page-address + flags
 15	LN	link register, i.e. return address back to caller
 
+Floating-Point Registers
+------------------------
+- V0 shall support IEEE754 32-bit single and 64-bit double precision floating-
+  point numerical representations
+- all floating-point registers are internally 64-bit to support both single
+  and double precision floating point with a single set of registers
+
+ID	Name	Brief
+--	----	-----
+0 	F0	floating-point register #0
+1 	F1	floating-point register #1
+2	F2	floating-point register #2
+3 	F3	floating-point register #3
+4 	F4	floating-point register #4
+5 	F5	floating-point register #5
+6 	F6	floating-point register #6
+7 	F7	floating-point register #7
+8 	F8	floating-point register #8
+9 	F9	floating-point register #9
+10	F10	floating-point register #10
+11	F11	floating-point register #11
+12	F12	floating-point register #12
+13	F13	floating-point register #13
+14	F14	floating-point register #14
+15	F15	floating-point register #15
+
 Addressing Modes
 ----------------
 
-Register Value
---------------
-- operands are stored in a register listed in the opcode
+No Address
+----------
+- operands are stored in registers
+
+Register Address
+----------------
+- base address is stored in a register
+
+Immediate Address
+-----------------
+- address/offset follows opcode
 
 Immediate Value
 ---------------
 - operand is stored as a 16-bit or aligned 32-bit value following opcode
   - op->u.arg16[0] or
   - op->u.arg32[0] or
+
+Direct Address
+--------------
+- immediate or register value is the canonical address
 
 PC-Relative Address
 -------------------
@@ -100,7 +138,7 @@ Indexed Address
 
     $val(%r1)
 
-  where Rb is the base register and Ri is the index register
+  where reg1/%r1 is the base address register and reg2/%r2/$val is the index.
 
 Notes
 -----
@@ -150,141 +188,173 @@ parm-field
 r1	register operand 1
 r2	register operand 2
 adr	memory address
-range	first register ID in low, last register ID in high 8 bits of operation
+r1r2	first register ID in low, last register ID in high 8 bits of operation
 	parm-field
 
-OP	CODE	PARM		VAL		BRIEF
---	----	----		---		-----
-/* logical operations */
-V0LOGIC	01
-NOT		ri1, r2		0		bitwise inverse
-AND		ri1, r2		AND		logical AND
-IOR		ri1, r2		OR		logical inclusive OR
-XOR		ri1, r2		OR|XCL		logical exclusive OR
-/* shift operations */
-V0SHIFT	02
-SHL		ri1, r2		0		shift left [logical]
-SHR		ri1, r2		DIR		shift right logical
-SAR		ri1, r2		DIR|ARI		shift right arithmetic
-ROL		ri1, r2		ROT		rotate left
-ROR		ri1, r2		DIR|ROT		rotate right
-/* add operations */)
-V0ADD	03
-ADD		ri1, r2		0		addition
-ADU		ri1, r2		UNS		unsigned addition
-ADC		ri1, r2		FLG		addition with carry
-AUC		ri1, r2		UNS|FLG		unsigned addition with carry
-INC		ri1, r2		INC		increment by one
-DEC		ri1, r2		INC|SUB		decrement by one
-SUB		ri1, r2		SUB		subtraction; ignore underflow
-SBU		ri1, r2		SUB|UNS 	unsigned subtraction
-SBC		ri1, r2		SUB|FLG		subtract with borrow-flag
-SUC		ri1, r2		SUB|UNS|FLG	unsigned subtraction with borrow
-CMP		ri1, r2		SUB|FLG		subtract + set MSW-flags
-/* multiplication instructions */
-V0MUL	04
-MUL		ri1, r2		0		multiplication, returns low word
-MLU		ri1, r2 	UNS		unsigned multiplication
-MLH		ri1, r2		HI		multiplication, high word
-MHU		ri1, r2		UNS|HI		unsigned high multiplication
-DIV		ri1, r2		DIV		division
-DVU		ri1, r2		DIV|UNS		unsigned division
-DIR		ri1, r2		DIV|REM		division with remainder
-DUR		ri1, r2		UNS|DIV|REM 	unsigned division with remainder
-RPS		ri1, r2		RPC		signed inverse reciprocal
-RPU		ri1, r2		UNS|RPC 	unsigned inverse reciprocal
-/* sign extension */
-V0SIGN	05
-SEX		ri1, r2		0
-ZEX		ri1, r2		UNS
-/* miscellaneous operations */
-V0MISC	06
-BSW		ri1, r2		0		byte swap
-CLZ		ri1, r2		CNT		count leading zero-bits
-HAM		ri1, r2		CNT|ONE		count 1-bits (Hamming weight)
-/* memory operations */
-V0MEM	07
-LEA		adr, r2		0		load effective address
-BAR             adr or ~0	RD|WR|BAR	memory barrier
-BRD		adr or ~0	RD|BAR		read barrier
-BWR		adr or ~0	WR|BAR		write barrier
-CPF		adr		RD		cacheline prefetch
-CFL		adr		WR		cacheline flush
-IPG		adr		WR|PG		invalidate page
-LDR		ri1, r2		MEM		load from register
-		ri1, adr	RD|MEM		load from memory
-RFL		ri1  		MSW		read machine status word
-SFL		ri1		WR|MSW		set machine status word
-STR		ri1, adr	WR|MEM		store into memory
-/* stack operations */
-V0STK   08
-PSH		r1		0		push value
-POP		r1		RD		pop value
-PSM		r1, range	N		push range
-POM		r1, range	RD|N		read range
-/* bit operations */
-V0BIT   09
-BTS		ri1, adr	0		bit test-and-set
-BTC		ri1, adr	CLR		bit test-and-clear
-BAS		ri1, adr	SYN		bit set atomic
-BAC		ri1, adr	CLR|SYN		bit clear atomic
-/* atomic memory operations */
-V0ATOM  0a
-LDL		adr, r2		LDR|SYN		load linked
-STC		r1, adr		WR|SYN		store conditional
-CAS		adr, ri1, r2	RD|WR|SYN	compare and swap
-/* branch operations */
-V0JMP	0b
-JMP		adr		0		unconditional jump
-BEQ		adr		EQ		branch if src == dest
-BNE		adr		NE		branch if src != dest
-BLT		adr		LT		branch if src < dest
-BUL		adr		UNS|LT		unsigned branch if src < dest
-BGT		adr		GT		branch if src > dest
-BUG		adr		UNS|GT		unsigned branch if src > dest
-BCB		adr		CB		branch if carry-bit set
-BOF		adr		CO		branch on overflow
-/* subroutine operations */
-V0SUB	0c
-SUB     	ri1, adr	0		call subroutine
-SYS     	adr		SYS		enter system mode
-BEG     	ri1		BEG		function prologue; adjust stack
-FIN     	ri1		FIN		function epilogue; adjust stack
-RET     	ri1		RET		return from subroutine
-SRT     	ri1		RET|SYS		return from system mode
-THR		ri1		THR		launch thread of execution
-THX		ri1, r2		THR|FIN		finish thread
-/* interrupt and system management operations */
-V0SYS	0d
-CLI		N/A  		0
-STI		ri1		ON; mask argument shall be added to signal mask
-ISM		ri1		ON|MSK	set interrupt mask
-IQM		ri1		MSK
-INT		ri1		INT
-SLP     			SLP	sleep/wait for interrupt
-WFE     			SLP|EV	sleep/wait for event
-SEV     			INT|EV
-IRT     			INT|RET
-HLT     			HLT
-RST     			ON|HLT
-/* input-output operations */
-V0IO	0e
-ICF         	ri1, adr   	0		configure I/O-device
-IRC		ri1, r2		RD		read I/O-register
-IWC     	ri1, ri2	WR		write I/O-register
-/* parm: init, sel, blt, ack, syn, fin */
-IOC				CMD	(sel, blt, stop, xmit, recv, sync, setf, ack)
-ILM         	MEM|CMD	load I/O-map descriptor; map device region
-/* system control operations */
-V0CTL	0f
-CTL		ri1, cmd
-				0		READ_MSR
-				1		WRITE_MSR
-				2		READ_TSC
-				3		CONF_TMR
-				4		READ_TMR
-				5		WRITE_TMR
-				6		SEND_INTR
-				7		MASK_INTR
-IRP	0e	ri1, r2				calculate inverse reciprocal
+Opcode Table
+------------
 
+Group	Code	Parm	Op	Flags	Args	Brief
+-----	----	----	--	-----	----	-----
+LOGIC	0x01	0x00	NOT		RI, R	bitwise inverse
+LOGIC	0x01	0x01	AND	AND	RI, R	bitwise logical AND
+LOGIC	0x01	0x02	IOR	OR	RI, R	bitwise logical OR
+LOGIC	0x01	0x03	XOR	EXC|OR	RI, R	bitwise logical XOR
+---------------------------
+SHIFT	0x02	0x00	SHL		RI, R	left shift
+SHIFT	0x02	0x01	SHR	DIR	RI, R	right shift
+SHIFT	0x02	0x02	SAR	ARI	RI, R	arithmetic right shift
+SHIFT	0x02	0x04	ROL	ROT	RI, R	left rotation
+SHIFT	0x02	0x05	ROR	DIR|ROT	RI, R	right rotation
+---------------------------
+ADD	0x03	0x00	ADD		RI, R	signed addition
+ADD	0x03	0x01	ADU	UNS	RI, R	unsigned addition
+ADD	0x03	0x02	ADC	FLG	RI, R	signed addition with carry
+ADD	0x03	0x03	AUC	UNS|FLG	RI, R	unsigned addition with carry
+ADD	0x03	0x04	INC	INC	RI, R	increment by one
+ADD	0x03	0x05	DEC	DEC|INC	RI, R	decrement by one
+ADD	0x03	0x08	SUB	SUB	RI, R	signed subtraction
+ADD	0x03	0x09	SBU	UNS|SUB	RI, R	unsigned subtraction
+ADD	0x03	0x0a	SBC	FLG|SUB	RI, R	subtraction with carry
+ADD	0x03	0x0b	SUC	UNS|FLG|SUB RI, R unsigned subtraction w/ carry
+ADD	0x03	0x0c	CMP	CMP|SUB	RI, R	comparison (subtract + set MSW)
+---------------------------
+MUL	0x04	0x00	MUL		RI, R	signed multiplication
+MUL	0x04	0x01	MLU	UNS	RI, R	unsigned multiplication
+MUL	0x04	0x02	MLH	HI	RI, R	signed multiplication, high word
+MUL	0x04	0x03	MHU	UNS|HI	RI, R	unsigned multiplication, high
+MUL	0x04	0x04	DIV	DIV	RI, R	division
+MUL	0x04	0x05	DVU	UNS|DIV	RI, R	unsigned division
+MUL	0x04	0x06	REM	REM|DIV	RI, R	remainder
+MUL	0x04	0x07	RMU	UNS|REM|DIV RI, R unsigned remainder
+MUL	0x04	0x08	RPS	RPC	RI, R	signed inverse reciprocal
+MUL	0x04	0x09	RPU	UNS|RPC	RI, R	unsigned inverse reciprocal
+---------------------------
+BIT	0x05	0x00	SEX		RI, R	sign extend
+BIT	0x05	0x01	ZEX	UNS	RI, R	zero extend
+BIT	0x05	0x02	CLZ	CNT	RI, R	count leading zeroes
+BIT	0x05	0x03	HAM	ONE|CNT	RI, R	Hamming weight/bit population
+BIT	0x05	0x04	EPR	PAR	RI, R	even parity
+BIT	0x05	0x05	OPR	ODD|PAR	RI, R	odd parity
+BIT	0x05	0x06	BCD	WR|BCD	RI, R	convert to binary coded decimal
+BIT	0x05	0x07	DCD	DCD|WR|BCD RI, R convert to binary
+BIT	0x05	0x08	CRC	CRC		compute redundancy check
+BIT	0x05	0x09	CST	RD|COND	RI, A	conditional store
+BIT	0x05	0x0a	CLD	WR|COND	RI, R	conditional load
+---------------------------
+MEM	0x06	0x00	LEA		A, R	load effective address
+MEM	0x06	0x01	LDR	RD	RIA, R	load into register
+MEM	0x06	0x02	STR	WR	RI, A	store to memory
+MEM	0x06	0x03	IPG	  	A	invalidate TLB-entry
+MEM	0x06	0x04	CLR	CL	A	mark cacheline clear
+MEM	0x06	0x05	CPF	RD|CL	A	prefetch cacheline
+MEM	0x06	0x06	CFL	WR|CL	A	flush cacheline
+MEM	0x06	0x08	BAR	BAR		full memory barrier
+MEM	0x06	0x09	BRD	RD|BAR		memory read barrier
+MEM	0x06	0x0a	BWR	WR|BAR		memory write barrier
+MEM	0x06	0x0b	RFL	RD|MSW	R	read machine status word/flags
+MEM	0x06	0x0c	WFL	WR|MSW	RI	write machine status word/flags
+---------------------------
+STK	0x07	0x00	PSH		RI	push register
+STK	0x07	0x01	POP	RD	R	pop register
+STK	0x07	0x02	PSM	N	R1R2	push register range
+STK	0x07	0x03	POM	RD|N	R1R2	pop register range
+STK	0x07	0x04	PSF	MSW		push MSW
+STK     0x07    0x05    POF     RD|MSW  R       pop MSW
+---------------------------
+ATOM	0x08	0x00	LDL		RIA, R	load-linked (lock cacheline)
+ATOM	0x08	0x01	STC	SYN	R1R2, A	store if cacheline not locked
+ATOM	0x08	0x02	CAS	CAS	R, R, A	compare and swap
+ATOM	0x08	0x03	CAS	DBL|CAS	R, R, A	compare and swap
+ATOM	0x08	0x04	BTS	BT	RI, A	bit test and set
+ATOM	0x08	0x05	BTC	CLR|BT	RI, A	bit test and clear
+---------------------------
+FLOW	0x09	0x00	JMP		RIA	unconditional jump
+FLOW	0x09	0x01	BEQ	EQ	RIA	branch if equal/zero
+FLOW	0x09	0x02	BNE	NE	RIA	branch if not equal/zero
+FLOW	0x09	0x04	BLT	LT	RIA	branch if less than
+FLOW	0x09	0x05	BUL	UNS|LT	RIA	unsigned branch if less than
+FLOW	0x09	0x06	BGT	GT	RIA	branch if greater than
+FLOW	0x09	0x07	BUG	UNS|GT	RIA	unsigned branch if greater than
+FLOW	0x09	0x08	BFL	BFL	RIA	branch if carry/borrow set
+FLOW	0x09	0x09	BOF	BOF|BFL	RIA	branch on overflow
+---------------------------
+SUB	0x0a	0x00	BEG			begin subroutine
+SUB	0x0a	0x01	FIN	FIN		finish subroutine
+SUB	0x0a	0x02	CSR	SUB		call subroutine
+SUB	0x0a	0x03	SYS	SYS|SUB		enter system mode
+SUB	0x0a	0x04	RET	RET		return from subroutine
+SUB	0x0a	0x05	IRT	TERM|RET	return from interrupt routine
+SUB	0x0a	0x06	SRT	SYS|RET		return from system mode
+SUB	0x0a	0x08	THR	THR		launch new thread
+SUB	0x0a	0x09	THX	TERM|THR	terminate thread
+SUB	0x0a	0x0a	THS	SYS|THR		launch system thread
+---------------------------
+SYS	0x0b	0x00	CLI			disable interrupts (mask)
+SYS	0x0b	0x01	STI			enable all interrupts
+SYS	0x0b	0x02	ISM	MSK	RI	set interrupt mask
+SYS	0x0b	0x03	ILM	ON|MSK	R	load interrupt mask
+SYS	0x0b	0x04	INT	INT	RI8	sent software interrupt
+SYS	0x0b	0x06	HLT	HLT		halt, wake up on interrupt
+SYS	0x0b	0x07	RST	RET|HLT	A	reset
+SYS	0x0b	0x08	WFE	EV	A	wait  for [cacheline] event
+SYS	0x0b	0x09	SEV	SEND|EV	A	signal [cacheline] event
+---------------------------
+IO	0x0c 	0x00	IOP		RI, A	set I/O permissions
+IO	0x0c	0x01	IOQ	RD	A, R	query I/O permissions
+IO	0x0c	0x02	IWC	IR	RI, R	write I/O register
+IO	0x0c	0x03	IRC	RD|IR	RI, R	read I/O register
+IO	0x0c	0x04	IOC	CMD	RI, A	I/O command
+IO	0x0c	0x05	ILM	MAP|CMD	RI, A	load I/O-descriptor map (limit)
+
+Call Conventions
+----------------
+- up to 7 register arguments are passed in R1..R7 in linear order
+  - extra arguments are pushed to stack in reverse order
+- registers R8..R15 are callee-saved scratch registers
+
+IOC Command
+-----------
+- IOC has an 8-bit parm argument stating the command ID (argument #1)
+- IOC has address argument pointing to struct iodev (argument #2)
+- size of IOC is 48 or 64 bytes depending on necessity of alignment
+
+Command IDs
+-----------
+
+ID	Description	Descriptor Members	Result
+--	-----------	------------------	------
+0	bus probe	bus			struct iodev[V0_IO_MAX_DEVS];
+1	bus init	bus			(struct iodev *ptr, size_t n)
+2	device probe	bus, dev		struct iodev[V0_IO_MAX_DEVS];
+3	device init	bus, dev		(uint16_t desc)
+4	device setup	bus, dev		(uint16_t desc)
+5	device remove	bus, dev		(uint16_t desc)
+6	device map	bus, dev, base, size	(uint16_t desc, void *adr)
+7	device unmap	bus, dev, base, size	(uint16_t desc)
+8	block buffer	bus, dev, base, size	(uint16_t desc, void *adr)
+9	block transfer	bus, dev, base, size	(uint16_t desc, void *adr)
+
+Syntax
+------
+
+	ioc $cmd, adr
+
+I/O Registers
+-------------
+
+ID	Description
+--	-----------
+0x00	Interrupt Controller
+0x01	Time-Stamp Counter
+0x02	Timer Configuration
+0x03	Real-Time Clock
+0x04	Keyboard Configuration
+0x05	Mouse Configuration
+0x06	Display Configuration
+0x07	Bus Configuration
+0x08	Device Configuration
+	- audio, video, HID, media, network, ...
+
+I/O Commands
+------------
