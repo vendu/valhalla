@@ -180,11 +180,15 @@ Fused Instructions
 - I'm thinking of doing at least fused shift-and-add as well as multiply-and-
   add [the last typically for floating-point]
 
-Insruction Set Description
---------------------------
+Call Conventions
+----------------
+- up to 7 register arguments are passed in R1..R7 in linear order
+  - extra arguments are pushed to stack in reverse order
+- registers R8..R15 are callee-saved scratch registers
 
-parm-field
-----------
+Instruction Set Description
+---------------------------
+
 r1	register operand 1
 r2	register operand 2
 adr	memory address
@@ -294,7 +298,7 @@ SYS	0x0b	0x00	CLI			disable interrupts (mask)
 SYS	0x0b	0x01	STI			enable all interrupts
 SYS	0x0b	0x02	ISM	MSK	RI	set interrupt mask
 SYS	0x0b	0x03	ILM	ON|MSK	R	load interrupt mask
-SYS	0x0b	0x04	INT	INT	RI8	sent software interrupt
+SYS	0x0b	0x04	INT	INT	RI8	send software interrupt
 SYS	0x0b	0x06	HLT	HLT		halt, wake up on interrupt
 SYS	0x0b	0x07	RST	RET|HLT	A	reset
 SYS	0x0b	0x08	WFE	EV	A	wait  for [cacheline] event
@@ -307,14 +311,29 @@ IO	0x0c	0x03	IRC	RD|IR	RI, R	read I/O register
 IO	0x0c	0x04	IOC	CMD	RI, A	I/O command
 IO	0x0c	0x05	ILM	MAP|CMD	RI, A	load I/O-descriptor map (limit)
 
-Call Conventions
-----------------
-- up to 7 register arguments are passed in R1..R7 in linear order
-  - extra arguments are pushed to stack in reverse order
-- registers R8..R15 are callee-saved scratch registers
+CST and CLD Instructions
+------------------------
 
-IOC Command
------------
+CST and CLD take a command ID in the xtra-field of the opcode. I will list the
+commands so far.
+
+CST/CLD Commands
+----------------
+
+Syntax
+------
+
+	cst $cmd, %r1, adr
+	cld $cmd, %r1, %r2
+
+ID	Name		Description
+--	----		-----------
+0	ZF		ZF is set in MSW
+1	NZ		ZF is not set in MSW
+2	OR		or
+
+IOC Instruction
+---------------
 - IOC has an 8-bit parm argument stating the command ID (argument #1)
 - IOC has address argument pointing to struct iodev (argument #2)
 - size of IOC is 48 or 64 bytes depending on necessity of alignment
@@ -325,15 +344,15 @@ Command IDs
 ID	Description	Descriptor Members	Result
 --	-----------	------------------	------
 0	bus probe	bus			struct iodev[V0_IO_MAX_DEVS];
-1	bus init	bus			(struct iodev *ptr, size_t n)
+1	bus init	bus			(struct iodev *ptr, size_t n);
 2	device probe	bus, dev		struct iodev[V0_IO_MAX_DEVS];
-3	device init	bus, dev		(uint16_t desc)
-4	device setup	bus, dev		(uint16_t desc)
-5	device remove	bus, dev		(uint16_t desc)
-6	device map	bus, dev, base, size	(uint16_t desc, void *adr)
-7	device unmap	bus, dev, base, size	(uint16_t desc)
-8	block buffer	bus, dev, base, size	(uint16_t desc, void *adr)
-9	block transfer	bus, dev, base, size	(uint16_t desc, void *adr)
+3	device init	bus, dev		(uint16_t desc);
+4	device setup	bus, dev		(uint16_t desc);
+5	device remove	bus, dev		(uint16_t desc);
+6	device map	bus, dev, base, size	(uint16_t desc, void *adr);
+7	device unmap	bus, dev, base, size	(uint16_t desc);
+8	block buffer	bus, dev, base, size	(uint16_t desc, void *adr);
+9	block transfer	bus, dev, base, size	(uint16_t desc, void *adr);
 
 Syntax
 ------
