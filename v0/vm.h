@@ -16,24 +16,11 @@
  * - immediate operands following 32-bit instructions are always 32-bit
  */
 
-#define V0_PARM_MASK       0x0f
-#define V0_ADR_MASK        0xf0 // addressing mode ival
-/* addressing modes */
-/* register addressing is detected with nonzero (op->reg) */
-#define V0_REG_ADR         0x00 // register operands
-#define V0_IMM_ADR         0x10 // operand follows opcode, e.g. op->arg[0].i32
-#define V0_PIC_ADR         0x20 // PC-relative, i.e. x(%pc) for shared objects
-#define V0_NDX_ADR         0x30 // indexed, i.e. %r1(%r2) or $c1(%r2)
-/* else indexed: pc[ndx << op->parm], ndx follows opcode */
 /* imm16- and imu16- immediate fields */
-#define V0_IMM16_VAL_MAX   0x7fff
-#define V0_IMM16_VAL_MIN   (-0x7fff - 1)
-#define V0_IMU16_VAL_MAX   0xffffU
-#define V0_IMU16_VAL_MIN   0U
+#define V0_IMM12_VAL_MAX   0x07ff
+#define V0_IMM12_VAL_MIN   (-0x07ff - 1)
 
 #define V0_INS_CODE_BITS   8
-#define V0_INS_IMM32_BIT   (1 << (V0_INS_CODE_BITS - 1)) // aligned value
-#define V0_INS_IMM16_BIT   (1 << (V0_INS_CODE_BITS - 2)) // 16-bit value
 #define V0_INS_REG_BITS    4
 #define V0_INS_REG_MASK    ((1 << V0_INS_REG_BITS) - 1)
 #define vogetinsval(ins)   ((ins)->arg.parm.val & 0x2f)

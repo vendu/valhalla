@@ -18,19 +18,33 @@ typedef uintptr_t  v0memadr;    // unsigned pointer value
 typedef uint32_t   v0pte;       // page-table entry
 typedef uint32_t   v0trapdesc;  // interrupt/exception/abort/fault spec
 typedef uint32_t   v0pagedesc;  // [virtual] memory page descriptor
+#define V0_IO_SX    (1 << 0)    // system-mappable system device
+#define V0_IO_SW    (1 << 1)    // system-writable device
+#define V0_IO_SR    (1 << 2)    // system-readable device
+#define v0_IO_GX    (1 << 3)    // group-mappable device
+#define v0_IO_GW    (1 << 4)    // group-writable device
+#define v0_IO_GR    (1 << 5)    // group-readable device
+#define V0_IO_UX    (1 << 6)    // user-mappable device
+#define V0_IO_UW    (1 << 7)    // user-writable device
+#define V0_IO_UR    (1 << 8)    // user-readable device
+#define V0_IO_DMA   (1 << 9)
+#define V0_IO_BUF   (1 << 10)
+#define V0_IO_BURST (1 << 11)
+typedef uint32_t   v0ioperm;    // I/O-permission bits
+typedef uint32_t   v0iodesc;    // I/O-device page address + flags
+struct v0iodesc {
+    void      *base;            // I/O-memory map address, e.g. framebuffer
+    void      *buf;             // I/O double-buffer address; e.g. graphics
+    size_t     bufsz;           // base/buf region size
+    v0ioperm   flg;             // I/O-permissions + flags
+};
 
 typedef long v0vmopfunc_t(struct vm *vm, void *op); // virtual machine operation
 
-struct v0 {
-    v0wreg  regs[V0_REGS];
-    size_t  ncl;                // V0_RAM_SIZE / V0_CL_SIZE
-    int8_t *clbits;
-    size_t  tlb;                // V0_PAGE_SIZE / sizeof(v0pte)
-    v0pte  *tlb;
-    size_t  npg;                // V0_RAM_SIZE / V0_PAGE_SIZE
-    v0pte  *ptab;
-    size_t  nio;                // V0_PAGE_SIZE / sizeof(v0iod *)
-    v0iod  *iodmap;
+union v0imm16 {
+    int16_t  i16;
+    uint16_t u16;
+    int16_t  ofs;
 };
 
 /*
@@ -50,22 +64,43 @@ union v0imm32 {
     uint8_t  u8;
 };
 
-/* flg-member bits */
-#define V0_ATOM_BIT 0x01        // atomic [bus-locking] instruction
-#define V0_IMM_BIT  0x02        // immediate argument follows opcode
+/* parm-member bits */
+#define V0_IMM_BIT  0x8000      // immediate argument follows opcode
 /* addressing modes */
-#define V0_NO_ADR   0x04        // register operands
-#define V0_REG_ADR  0x08        // base address in register
-#define V0_PIC_ADR  0x10        // PC-relative, i.e. x(%pc) for shared objects
-#define V0_NDX_ADR  0x20        // indexed, i.e. %r1(%r2) or $c1(%r2)
-#define V0_BYTE_BIT 0x40        // 8-bit operand
-#define V0_HALF_BIT 0x80        // 16-bit operand
+#define V0_PIC_ADR  0x4000      // PC-relative, i.e. x(%pc) for shared objects
+#define V0_NDX_ADR  0x2000      // indexed, i.e. %r1(%r2) or $c1(%r2)
+#define V0_REG_ADR  0x1000      // base address in register
+#define V0_ADR_MASK 0x7000      // mask of addressing mode bits
+#define v0getreg1(vm, ins)                                              \
+    ((vm)->regs[(ins)->regs & V0_INS_REG_MASK])
+#define v0getreg2(vm, ins)                                              \
+    ((vm)->regs[((ins)->regs >> V0_INS_REG_BITS) & V0_INS_REG_MASK])
+#define v0getadr1(vm, ins)                                              \
+    (((ins)->parm & V0_ADR_MASK == V0_REG_ADR)                          \
+     ? (v0getreg1(vm, ins))                                             \
+     : ((v0getflg(ins) & V0_NDX_ADR)                                    \
+        ? (v0getreg1(vm, ins) + v0getofs(vm, ins))                      \
+        : ((vm)->regs[V0_PC_REG] + sizeof(struct v0ins) * v0getval(ins))))
+#define v0getadr2(vm, ins)                                              \
+    (((ins)->parm & V0_ADR_MASK == V0_REG_ADR)                          \
+     ? (v0getreg2(vm, ins))                                             \
+     : ((v0getflg(ins) & V0_NDX_ADR)                                    \
+        ? (v0getreg2(vm, ins) + v0getofs(vm, ins))                      \
+        : ((vm)->regs[V0_PC_REG] + sizeof(struct v0ins) * v0getval(ins))))
+#define v0getcode(ins) ((ins)->code)
+#define v0getunit(ins) ((ins)->code >> 4)
+#define v0getop(ins)   ((ins)->code & 0x0f)
+#define v0getflg(ins)  ((ins)->parm 0xf000)
+#define v0getval(ins)  (((ins)->parm & 0x0800)                          \
+                        ? (-((ins)->parm & 0x07ff) - 1)                 \
+                        : ((ins)->parm & 0x07ff))
+#define v0getofs(ins)  ((ins)->imm[0].ofs)
+:(ins)->parm & 0x0fff)
 struct v0ins {
-    uint8_t       unit;         // unit ID
-    uint8_t       op;           // instruction ID
+    uint8_t       code;         // unit + instruction IDs
     uint8_t       regs;         // register IDs
-    uint8_t       xtra;         // instruction flags
-    union v0arg32 imm[VLA];     // immediate argument if present
+    int16_t       parm;         // flag-bits + 12-bit immediate value
+    union v0imm32 imm[VLA];     // immediate argument if present
 };
 
 struct v0callctx {

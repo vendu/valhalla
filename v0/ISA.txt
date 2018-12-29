@@ -14,7 +14,7 @@ User Registers
 - the R2-register provides  another return value for certain instructions, e.g.
   for returning the remainder when dividing integer values
 - registers R2-R7 are used for the second to seventh function arguments
-- registers R8-R15 are callee-save
+- registers R8-R15 are callee-save scratch registers
 
 Name	Brief
 ----	-----
@@ -55,7 +55,6 @@ ID	Name	Brief
 10	CL	cacheline-bitmap base address
 11	IO	I/O descriptor map page-address + flags
 15	LN	link register, i.e. return address back to caller
-
 Floating-Point Registers
 ------------------------
 - V0 shall support IEEE754 32-bit single and 64-bit double precision floating-
@@ -99,9 +98,7 @@ Immediate Address
 
 Immediate Value
 ---------------
-- operand is stored as a 16-bit or aligned 32-bit value following opcode
-  - op->u.arg16[0] or
-  - op->u.arg32[0] or
+- operand is stored as a 32-bit value following the opcode
 
 Direct Address
 --------------
@@ -198,31 +195,64 @@ r1r2	first register ID in low, last register ID in high 8 bits of operation
 Opcode Table
 ------------
 
-Group	Code	Parm	Op	Flags	Args	Brief
------	----	----	--	-----	----	-----
-LOGIC	0x01	0x00	NOT		RI, R	bitwise inverse
-LOGIC	0x01	0x01	AND	AND	RI, R	bitwise logical AND
-LOGIC	0x01	0x02	IOR	OR	RI, R	bitwise logical OR
-LOGIC	0x01	0x03	XOR	EXC|OR	RI, R	bitwise logical XOR
+Group	Unit	Code	Op	Flags	Brief
+-----	----	----	--	-----	-----
+
+Syntax
+------
+
+	not	R1, R2		; R2 = not(R1)
+	not	I1, R2		; R2 = not(I1)
+
+LOGIC	0x01	0x00	NOT		bitwise inverse
+LOGIC	0x01	0x01	AND	AND	bitwise logical AND
+LOGIC	0x01	0x02	IOR	OR	bitwise logical OR
+LOGIC	0x01	0x03	XOR	EXC|OR	bitwise logical XOR
+LOGIC	0x01	0x04	NEG	NEG	negative
 ---------------------------
-SHIFT	0x02	0x00	SHL		RI, R	left shift
-SHIFT	0x02	0x01	SHR	DIR	RI, R	right shift
-SHIFT	0x02	0x02	SAR	ARI	RI, R	arithmetic right shift
-SHIFT	0x02	0x04	ROL	ROT	RI, R	left rotation
-SHIFT	0x02	0x05	ROR	DIR|ROT	RI, R	right rotation
+
+Syntax
+------
+
+	shl	RV1, R2		; R2 <<= RV1
+	sra	V, R1, R2	; R2 = (R2 >> V) + R1
+
+SHIFT	0x02	0x00	SHL		left shift
+SHIFT	0x02	0x01	SHR	DIR	right shift
+SHIFT	0x02	0x02	SAR	ARI	arithmetic right shift
+SHIFT	0x02	0x04	ROL	ROT	left rotation
+SHIFT	0x02	0x05	ROR	DIR|ROT	right rotation
+SHIFT	0x02	0x08	SLA	SHA	shift left and accumulate
+SHIFT	0x02	0x09	SRA	DIR|SHA	shift right and accumulate
+SHIFT	0x02	0x0a	SLM	SAM	shift left and mask
+SHIFT	0x02	0x0b	SRM	DIR|SAM shift right and mask
 ---------------------------
-ADD	0x03	0x00	ADD		RI, R	signed addition
-ADD	0x03	0x01	ADU	UNS	RI, R	unsigned addition
-ADD	0x03	0x02	ADC	FLG	RI, R	signed addition with carry
-ADD	0x03	0x03	AUC	UNS|FLG	RI, R	unsigned addition with carry
-ADD	0x03	0x04	INC	INC	RI, R	increment by one
-ADD	0x03	0x05	DEC	DEC|INC	RI, R	decrement by one
-ADD	0x03	0x08	SUB	SUB	RI, R	signed subtraction
-ADD	0x03	0x09	SBU	UNS|SUB	RI, R	unsigned subtraction
-ADD	0x03	0x0a	SBC	FLG|SUB	RI, R	subtraction with carry
-ADD	0x03	0x0b	SUC	UNS|FLG|SUB RI, R unsigned subtraction w/ carry
-ADD	0x03	0x0c	CMP	CMP|SUB	RI, R	comparison (subtract + set MSW)
+
+Syntax
+------
+
+	cmp	R1, R2		; R2 -= R1, set flags
+	cmp	I1, R2		; R2 -= I1, set flags
+
+ADD	0x03	0x00	ADD		signed addition
+ADD	0x03	0x01	ADU	UNS	unsigned addition
+ADD	0x03	0x02	ADC	FLG	signed addition with carry
+ADD	0x03	0x03	AUC	UNS|FLG	unsigned addition with carry
+ADD	0x03	0x04	INC	INC	increment by one
+ADD	0x03	0x05	DEC	DEC|INC	decrement by one
+ADD	0x03	0x08	SUB	SUB	signed subtraction
+ADD	0x03	0x09	SBU	UNS|SUB	unsigned subtraction
+ADD	0x03	0x0a	SBC	FLG|SUB	subtraction with carry
+ADD	0x03	0x0b	SUC	UNS|FLG|SUB	unsigned subtraction w/ carry
+ADD	0x03	0x0c	CMP	CMP|SUB	comparison (subtract + set MSW)
 ---------------------------
+
+Syntax
+------
+
+	mul	R1, R2		; R2 *= R1
+	mul	I1, R2		; R2 *= I1
+
 MUL	0x04	0x00	MUL		RI, R	signed multiplication
 MUL	0x04	0x01	MLU	UNS	RI, R	unsigned multiplication
 MUL	0x04	0x02	MLH	HI	RI, R	signed multiplication, high word
@@ -234,17 +264,28 @@ MUL	0x04	0x07	RMU	UNS|REM|DIV RI, R unsigned remainder
 MUL	0x04	0x08	RPS	RPC	RI, R	signed inverse reciprocal
 MUL	0x04	0x09	RPU	UNS|RPC	RI, R	unsigned inverse reciprocal
 ---------------------------
-BIT	0x05	0x00	SEX		RI, R	sign extend
-BIT	0x05	0x01	ZEX	UNS	RI, R	zero extend
-BIT	0x05	0x02	CLZ	CNT	RI, R	count leading zeroes
-BIT	0x05	0x03	HAM	ONE|CNT	RI, R	Hamming weight/bit population
-BIT	0x05	0x04	EPR	PAR	RI, R	even parity
-BIT	0x05	0x05	OPR	ODD|PAR	RI, R	odd parity
-BIT	0x05	0x06	BCD	WR|BCD	RI, R	convert to binary coded decimal
-BIT	0x05	0x07	DCD	DCD|WR|BCD RI, R convert to binary
-BIT	0x05	0x08	CRC	CRC		compute redundancy check
-BIT	0x05	0x09	CST	RD|COND	RI, A	conditional store
-BIT	0x05	0x0a	CLD	WR|COND	RI, R	conditional load
+
+Syntax
+------
+
+	sexb	R1, R2		; R2 = sex(V = 8, R1)
+	sexb	I1, R2		; R2 = sex(V = 8, I1)
+	sexw	I1, R2		; R2 = sex(V = 16, I1)
+	cst
+
+BIT	0x05	0x00	SEX		sign extend
+BIT	0x05	0x01	ZEX	UNS	zero extend
+BIT	0x05	0x02	CLZ	CNT	count leading zeroes
+BIT	0x05	0x03	HAM	ONE|CNT	Hamming weight/bit population
+BIT	0x05	0x04	PAR	PAR	parity check, 1 -> odd, 0 -> even
+BIT	0x05	0x06	BCD	WR|BCD	convert to binary coded decimal
+BIT	0x05	0x07	DCD	DCD|WR|BCD	convert to binary
+BIT	0x05	0x08	CRC	CRC	compute redundancy check
+BIT	0x05	0x09	CST	RD|COND	conditional store
+BIT	0x05	0x0a	CLD	WR|COND	conditional load
+BIT	0x055	0x0b	SWB		swap byte-order
+BIT	0x05	0x0c	HSH	HSH	32-bit hash
+BIT	0x05	0x0d	UNH	RD|HSH	32-bit unhash (revert HSH)
 ---------------------------
 MEM	0x06	0x00	LEA		A, R	load effective address
 MEM	0x06	0x01	LDR	RD	RIA, R	load into register
@@ -266,10 +307,10 @@ STK	0x07	0x03	POM	RD|N	R1R2	pop register range
 STK	0x07	0x04	PSF	MSW		push MSW
 STK     0x07    0x05    POF     RD|MSW  R       pop MSW
 ---------------------------
-ATOM	0x08	0x00	LDL		RIA, R	load-linked (lock cacheline)
+ATOM	0x08	0x00	LNK		RIA, R	load-linked (lock cacheline)
 ATOM	0x08	0x01	STC	SYN	R1R2, A	store if cacheline not locked
 ATOM	0x08	0x02	CAS	CAS	R, R, A	compare and swap
-ATOM	0x08	0x03	CAS	DBL|CAS	R, R, A	compare and swap
+ATOM	0x08	0x03	CS2	DBL|CAS	R, R, A	compare and swap
 ATOM	0x08	0x04	BTS	BT	RI, A	bit test and set
 ATOM	0x08	0x05	BTC	CLR|BT	RI, A	bit test and clear
 ---------------------------
@@ -309,7 +350,7 @@ IO	0x0c	0x01	IOQ	RD	A, R	query I/O permissions
 IO	0x0c	0x02	IWC	IR	RI, R	write I/O register
 IO	0x0c	0x03	IRC	RD|IR	RI, R	read I/O register
 IO	0x0c	0x04	IOC	CMD	RI, A	I/O command
-IO	0x0c	0x05	ILM	MAP|CMD	RI, A	load I/O-descriptor map (limit)
+IO	0x0c	0x05	ILD	MAP|CMD	RI, A	load I/O-descriptor map (limit)
 
 CST and CLD Instructions
 ------------------------
@@ -323,14 +364,23 @@ CST/CLD Commands
 Syntax
 ------
 
-	cst $cmd, %r1, adr
-	cld $cmd, %r1, %r2
+	cstle	R1, RI2
+	cldeq	I1, R2		; R2 = I1 iff ZF is set in MSW
 
-ID	Name		Description
---	----		-----------
-0	ZF		ZF is set in MSW
-1	NZ		ZF is not set in MSW
-2	OR		or
+Val	Name		Description
+---	----		-----------
+0	ZF		ZF
+1	NZ		!ZF
+2	OF		OF
+3	NO		!OF
+4	CF		CF
+5	NC		!CF
+6	LT		!ZF && !CF
+7	LE		ZF || !CF
+8	EQ		ZF
+9	NE		!ZF
+10	GT		!ZF && CF
+11	GE		ZF || CF
 
 IOC Instruction
 ---------------
@@ -341,8 +391,8 @@ IOC Instruction
 Command IDs
 -----------
 
-ID	Description	Descriptor Members	Result
---	-----------	------------------	------
+Val	Description	Descriptor Members	Result
+---	-----------	------------------	------
 0	bus probe	bus			struct iodev[V0_IO_MAX_DEVS];
 1	bus init	bus			(struct iodev *ptr, size_t n);
 2	device probe	bus, dev		struct iodev[V0_IO_MAX_DEVS];
@@ -357,7 +407,11 @@ ID	Description	Descriptor Members	Result
 Syntax
 ------
 
-	ioc $cmd, adr
+	ioc	$0, R1, R2	; R2 = ioc(V = PROBE, R1) ; R1 <= struct iodev *
+		    		; R2 = device count
+	ioc	$4, R1, R2	; R2 = ioc(V = SETUP, R1) ; R1 <= uint16_t
+		    		; R2 = setup status
+	ild	RI1		; Riom = RI1
 
 I/O Registers
 -------------

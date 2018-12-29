@@ -117,7 +117,7 @@
 #define V0_IV_ID         0x06 // interrupt vector address
 #define V0_IM_ID         0x07 // interrupt-mask (1-bit enabled)
 #define V0_PD_ID         0x08 // page directory address + flags
-#define V0_IO_ID         0x09 // I/O descriptor map address + flags
+#define V0_IOM_ID        0x09 // I/O descriptor map address + flags
 #define V0_FP0_ID        0x0a // system frame-pointer (ring 0)
 #define V0_SP0_ID        0x0b // system stack-pointer (ring 0)
 #define V0_IV0_ID        0x0c // system-mode interrupt vector
@@ -134,7 +134,7 @@
 #define V0_IV_REG        V0_SYSREG(V0_IV_ID)
 #define V0_IM_REG        V0_SYSREG(V0_IM_ID)
 #define V0_PD_REG        V0_SYSREG(V0_PD_ID)
-#define V0_IO_REG        V0_SYSREG(V0_IO_ID)
+#define V0_IOM_REG       V0_SYSREG(V0_IOM_ID)
 #define V0_FP0_REG       V0_SYSREG(V0_FP0_ID)
 #define V0_SP0_REG       V0_SYSREG(V0_SP0_ID)
 #define V0_IV0_REG       V0_SYSREG(V0_IV0_ID)

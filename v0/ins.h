@@ -42,22 +42,25 @@
 
 /* values for the val-field; GEN */
 /* common flags */
-#define V0_UNS_BIT  (1U << 0)
-#define V0_FLG_BIT  (1U << 1)
-#define V0_MSW_BIT  (1U << 2)
+#define V0_UNS_BIT  (1U << 0)   // unsigned operands
+#define V0_FLG_BIT  (1U << 1)   // processor flag-bits altered
+#define V0_MSW_BIT  (1U << 2)   // processor status-word (MSW) altered
 /* logical operations */
-#define V0_AND_BIT  (1U << 0)
-#define V0_EXC_BIT  (1U << 0)
-#define V0_OR_BIT   (1U << 1)
+#define V0_AND_BIT  (1U << 0)   // logical AND operation: R2 &= R1
+#define V0_EXC_BIT  (1U << 0)   // exclusive [OR] operation: R2 ^= R1
+#define V0_OR_BIT   (1U << 1)   // logical OR operation: R2 |= R1
+#define V0_NEG_BIT  (1U << 2)   // arithmetic negation: R2 = -R1
 /* shift operations */
-#define V0_DIR_BIT  (1U << 0)
-#define V0_ARI_BIT  (1U << 1)
-#define V0_ROT_BIT  (1U << 2)
+#define V0_DIR_BIT  (1U << 0)   // right shift operations: SHR, SAR, ROR
+#define V0_ARI_BIT  (1U << 1)   // arithmetic [right] shift: SAR
+#define V0_ROT_BIT  (1U << 2)   // bitwise rotation: ROL, ROR
+#define V0_SHA_BIT  (1U << 3)   // shift and add: SLA, SRA
+#define V0_SAM_MASK 0x0a        // shift and mask: SLM, SRM
 /* add operations */
-#define V0_DEC_BIT  (1U << 0)
-#define V0_INC_BIT  (1U << 2)
-#define V0_CMP_BIT  (1U << 2)
-#define V0_SUB_BIT  (1U << 3)
+#define V0_DEC_BIT  (1U << 0)   // DEC
+#define V0_INC_BIT  (1U << 2)   // INC
+#define V0_CMP_BIT  (1U << 2)   // CMP
+#define V0_SUB_BIT  (1U << 3)   // subtract
 /* multiplication operations */
 #define V0_REM_BIT  (1U << 1)
 #define V0_HI_BIT   (1U << 1)
@@ -73,6 +76,7 @@
 #define V0_BCD_BIT  (1U << 2)
 #define V0_CRC_BIT  (1U << 3)
 #define V0_COND_BIT (1U << 3)
+#define V0_HSH_MASK 0x0c
 /* memory operations */
 #define V0_RD_BIT   (1U << 0)
 #define V0_REG_BIT  (1U << 1)
