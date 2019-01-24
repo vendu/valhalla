@@ -102,63 +102,58 @@
 #define V0_SAVE_REG_MAX  V0_R7_REG
 #define V0_SAVE_REGS     7    // caller saves r1..r7, callee r8..r15
 /* SYSTEM REGISTERS */
-#define V0_PC_ID         0x00 // program counter
-#define V0_FP_ID         0x01 // frame pointer
-#define V0_SP_ID         0x02 // stack pointer
-#define V0_MSW_ID        0x03 // machine status word
-#define V0_LN_ID         0x04 // link register (return address)
-#define V0_TR_ID         0x05 // thread status register
-#define V0_IV_ID         0x06 // interrupt vector address
-#define V0_IM_ID         0x07 // interrupt-mask (1-bit enabled)
-#define V0_PD_ID         0x08 // page directory address + flags
-#define V0_IOM_ID        0x09 // I/O descriptor map address + flags
-#define V0_FP0_ID        0x0a // system frame-pointer (ring 0)
-#define V0_SP0_ID        0x0b // system stack-pointer (ring 0)
-#define V0_BR_ID         0x0c // bound-range register (buffer violations)
-#define V0_VC_ID         0x0d // local variable count
-#define V0_CR_ID         0x0e // control-register
-#define V0_MFR_ID        0x0f // machine feature word
+#define V0_PC_REG        0x10 // program counter (instruction pointer)
+#define V0_LR_REG        0x11 // link register (return address)
+#define V0_FP_REG        0x12 // frame pointer
+#define V0_SP_REG        0x13 // stack pointer
+#define V0_MSW_REG       0x14 // machine status word
+#define V0_WC_REG        0x15 // thread wait channel
+#define V0_IM_REG        0x16 // interrupt-mask (1-bit enabled)
+#define V0_IOM_REG       0x17 // I/O descriptor map address + # of descriptors
+#define V0_IOD_REG       0x18 // current I/O descriptor address + index
+#define V0_IV_REG        0x19 // interrupt vector address
+#define V0_PD_REG        0x1a // page directory address + flags
+#define V0_MFR_REG       0x1b // machine feature word
+#define V0_TCB_REG       0x1c // thread control block base address
+/* BR and TSC are used as full 64-bit registers */
+#define V0_BLO_REG       0x1d // bound range low limit
+#define V0_BHI_REG       0x1e // bound range high limit
+#define V0_TSC_REG       0x1f // 64-bit timestamp counter
 #define V0_SYS_REGS      16
-#define V0_PC_REG        V0_SYSREG(V0_PC_ID)
-#define V0_FP_REG        V0_SYSREG(V0_FP_ID)
-#define V0_SP_REG        V0_SYSREG(V0_SP_ID)
-#define V0_MSW_REG       V0_SYSREG(V0_MSW_ID)
-#define V0_LN_REG        V0_SYSREG(V0_LN_ID)
-#define V0_TR_REG        V0_SYSREG(V0_TR_ID)
-#define V0_IV_REG        V0_SYSREG(V0_IV_ID)
-#define V0_IM_REG        V0_SYSREG(V0_IM_ID)
-#define V0_PD_REG        V0_SYSREG(V0_PD_ID)
-#define V0_IOM_REG       V0_SYSREG(V0_IOM_ID)
-#define V0_FP0_REG       V0_SYSREG(V0_FP0_ID)
-#define V0_SP0_REG       V0_SYSREG(V0_SP0_ID)
-#define V0_BR_REG        V0_SYSREG(V0_BR_ID)
-#define V0_VC_REG        V0_SYSREG(V0_VC_ID)
-#define V0_CR_REG        V0_SYSREG(V0_CR_ID)
-#define V0_MFR_REG       V0_SYSREG(V0_MFR_ID)
 /* system register IDs */
 #define V0_STD_REGS      (V0_INT_REGS + V0_SYS_REGS) // total # of registers
-#define V0_FPU_REGS      (V0_INT_REGS)
-#define V0_SYSREG(x)     (V0_INT_REGS + (x))         // system register indices
-/* values for regs[V0_MSW_REG] */
+/* values for CR */
+#define V0_CR_RING_BIT   (1 << 0)  // system (0) or user (1) mode
+#define V0_IOP_BIT       (1 << 1)  // I/O permission checks
+/* values for MSW */
 #define V0_MSW_DEF_BITS  (V0_IF_BIT)
-#define V0_MSW_PF_BIT    (1 << 0)   // system/privileged execution mode
-#define V0_MSW_ZF_BIT    (1 << 1)   // zero
-#define V0_MSW_LT_BIT    (1 << 2)   // carry-flag, return bit for BTR, BTS, BTC
-#define V0_MSW_GT_BIT    (1 << 3)   // carry-flag, return bit for BTR, BTS, BTC
-#define V0_MSW_CF_BIT    (1 << 4)   // carry
-#define V0_MSW_OF_BIT    (1 << 5)   // overflow
-#define V0_MSW_IF_BIT    (1 << 6)   // interrupts pending
-/* values for MFW- and MSW-registers */
-#define V0_M_PG_BIT      (1 << 31)  // paging/virtual memory enabled
-#define V0_M_FP_BIT      (1 << 30)  // floating-point processor present
-#define V0_M_FM_BIT      (1 << 29)  // fixed-point support
-#define V0_M_GP_BIT      (1 << 28)  // graphics processor present
-#define V0_M_DP_BIT      (1 << 27)  // DSP support
-#define V0_M_MD_BIT      (1 << 26)  // SIMD support
-#Define V0_M_VP_BIT      (1 << 25)  // vector processor present
-#define V0_M_MP_BIT      (1 << 24)  // multiprocessor support
-#define V0_M_IO_BIT      (1 << 23)  // I/O permission control
-#define V0_M_TF_BIT      (1 << 22)  // multithread support
+#define V0_MSW_ZF_BIT    (1 << 0)  // zero
+#define V0_MSW_CF_BIT    (1 << 1)  // carry, return bit for BTR, BTS, BTC
+#define V0_MSW_OF_BIT    (1 << 2)  // overflow
+#define V0_MSW_LT_BIT    (1 << 3)  // less than
+#define V0_MSW_SF_BIT    (1 << 4)  // signed result
+#define V0_MSW_IF_BIT    (1 << 5)  // interrupts pending
+/* values for MFW- and CR-registers */
+#define V0_SYS_MP_BIT    (1 << 31) // multiprocessor support
+#define V0_SYS_PG_BIT    (1 << 30) // paging/virtual memory enabled
+#define V0_SYS_IO_BIT    (1 << 29) // I/O permission control
+#define V0_SYS_FP_BIT    (1 << 28) // floating-point processor present
+#define V0_SYS_FM_BIT    (1 << 27) // fixed-point support
+#define V0_SYS_GP_BIT    (1 << 26) // graphics processor present
+#define V0_SYS_DP_BIT    (1 << 25) // DSP support
+#define V0_SYS_MD_BIT    (1 << 24) // SIMD support
+#define V0_SYS_VP_BIT    (1 << 23) // vector processor present
+/* TR-register */
+#define V0_TR_ID_MASK    0x000000ff // 256 unique thread IDs
+#define V0_TR_STAT_MASK  0x0000ff00 // thread status
+#define V0_TR_INTR_MASK  0x00ff0000 // thread interrupt-mask
+#define V0_TR_WAIT_MASK  0xff000000 // thread wait-channel ID
+/* IOM-register */
+#define V0_IOM_BASE_MASK 0xfffff000 // page-aligned
+#define V0_IOM_NUM_MASK  0x00000fff // number of descriptors in map
+/* IOD-register */
+#define V0_IOD_BASE_MASK 0xfffff000 // page-aligned current descriptor address
+#define V0_IOD_NDX_MASK  0x00000fff // current descriptor index into map
 /* BR-register */
 #define V0_BR_LOW_LIM    (1 << 31)
 #define V0_BR_ADR_MASK   (~V0_BR_LOW_LIM)
