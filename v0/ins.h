@@ -150,20 +150,23 @@ v0decadr2(struct v0 *vm, struct v0ins *ins)
 #define V0_CL_BIT     (1 << 2)  // cacheline operation
 #define V0_BAR_BIT    (1 << 3)  // memory barrier
 #define V0_IPG_MASK   0x03
-#define V0_MSW_MASK   0x0a
+#define V0_PFN_MASK   0x07
 #define V0_COND_MASK  0x0c
+#define V0_STN_MASK   0x0e
 #define V0_LEA_OP     0x00
 #define V0_LDR_OP     V0_RD_BIT
 #define V0_STR_OP     V0_WR_BIT
 #define V0_IPG_OP     V0_IPG_MASK
-#define V0_CLR_OP     V0_CL_BIT
+#define V0_CLD_OP     V0_CL_BIT
 #define V0_CPF_OP     (V0_RD_BIT | V0_CL_BIT)
 #define V0_CFL_OP     (V0_WR_BIT | V0_CL_BIT)
+#define V0_PFN_OP     V0_PFN_MASK
 #define V0_BAR_OP     V0_BAR_BIT
 #define V0_BRD_OP     (V0_RD_BIT | V0_BAR_BIT)
 #define V0_BWR_OP     (V0_WR_BIT | V0_BAR_BIT)
 #define V0_CLD_OP     V0_COND_MASK
 #define V0_CST_OP     (V0_CST_BIT | V0_COND_MASK)
+#define V0_STN_OP     V0_STN_MASK
 /* STACK-unit */
 #define V0_STACK_UNIT 0x07
 #define V0_POP_BIT    (1 << 0)

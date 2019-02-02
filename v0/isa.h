@@ -147,7 +147,7 @@
 #define V0_TR_ID_MASK    0x000000ff // 256 unique thread IDs
 #define V0_TR_STAT_MASK  0x0000ff00 // thread status
 #define V0_TR_INTR_MASK  0x00ff0000 // thread interrupt-mask
-#define V0_TR_WAIT_MASK  0xff000000 // thread wait-channel ID
+#define V0_TR_FLAG_MASK  0xff000000
 /* IOM-register */
 #define V0_IOM_BASE_MASK 0xfffff000 // page-aligned
 #define V0_IOM_NUM_MASK  0x00000fff // number of descriptors in map

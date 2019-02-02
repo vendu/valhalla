@@ -1,5 +1,5 @@
-#ifndef __VALHLLA_PARAM_H__
-#define __VALHLLA_PARAM_H__
+#ifndef __VALHALLA_PARAM_H__
+#define __VALHALLA_PARAM_H__
 
 #define min(a, b)         ((b) ^ (((a) ^ (b)) & -((a) < (b))))
 #define max(a, b)         ((a) ^ (((a) ^ (b)) & -((a) < (b))))
@@ -10,5 +10,5 @@
 #define rounddown2(a, b2) ((a) & ~((b2) - 0x01))
 #define ptralign(ptr, b2) ((void *)roundup2((uintptr_t)(ptr), (b2)))
 
-#endif /*f __VALHLLA_PARAM_H__ */
+#endif /*f __VALHALLA_PARAM_H__ */
 
